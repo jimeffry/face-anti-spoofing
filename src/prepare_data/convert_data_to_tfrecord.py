@@ -124,11 +124,11 @@ class Img2TFrecord(object):
         img_dict['img_name'] = self.img_name
         return img_dict
 
-    def transform_widerface(self):
+    def transform_img(self):
         '''
         annotation: 1/img_01 0 ...
         '''
-        auger_list=["Sequential", "Fliplr","Affine","Flipud"]
+        auger_list=["Sequential", "Fliplr","AdditiveGaussianNoise","SigmoidContrast","Multiply"]
         trans = transform.Transform(img_auger_list=auger_list,class_num=cfgs.CLS_NUM)
         img_dict = dict()
         if self.img_org is None:
@@ -162,7 +162,7 @@ class Img2TFrecord(object):
             #label_show(img_dict,'bgr')
             total_img+=1
             if random.randint(0, 1) and not cfgs.BIN_DATA:
-                img_dict = self.transform_widerface()
+                img_dict = self.transform_img()
                 if img_dict is None:
                     #print("the aug img path is none:",tmp.strip().split()[0])
                     failed_aug_path.write(tmp.strip().split()[0] +'\n')
@@ -186,7 +186,7 @@ def label_show(img_dict,mode='rgb'):
     if mode == 'rgb':
         img = img[:,:,::-1]
     img = np.array(img,dtype=np.uint8)
-    gt = img_dict['gt']
+    gt = float(img_dict['gt'])
     #print("img",img.shape)
     #print("box",gt.shape)
     score_label = str("{:.2f}".format(gt))
@@ -207,5 +207,8 @@ if __name__ == '__main__':
     args = parms()
     dataset = args.dataset_name
     if 'Prison' in dataset:
+        ct = Img2TFrecord(args)
+        ct.convert_widerface_to_tfrecord()
+    elif 'Mobile' in dataset:
         ct = Img2TFrecord(args)
         ct.convert_widerface_to_tfrecord()

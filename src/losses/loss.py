@@ -22,7 +22,8 @@ def entropy_loss(logits,labels,class_num):
     labels_hot = tf.one_hot(labels,class_num)
     cross_entropy = -tf.reduce_sum(labels_hot * tf.log(logits), axis=1)
     #cross_entropy = -labels_hot * tf.log(logits)
-    return cross_entropy
+    cross_loss = tf.reduce_mean(cross_entropy)
+    return cross_loss,logits
 
 def focal_loss(logits,labels,class_num,alpha=0.25,gamma=2):
     """ 
@@ -56,7 +57,8 @@ def focal_loss(logits,labels,class_num,alpha=0.25,gamma=2):
     focal_weight=tf.pow(focal_weight, gamma)
     focal_weight = tf.multiply(alpha_factor, focal_weight)
     cross_entropy = -tf.reduce_sum(labels_hot * tf.log(softmax_out),axis=1)
-    cls_loss = tf.reduce_sum(focal_weight * cross_entropy,axis=0) / tf.cast(batch_size,tf.float32)
+    #cls_loss = tf.reduce_sum(focal_weight * cross_entropy,axis=0) / tf.cast(batch_size,tf.float32)
+    cls_loss = tf.reduce_mean(focal_weight * cross_entropy)
     return cls_loss,softmax_out
 
 def cal_accuracy(cls_prob,label):
@@ -75,8 +77,9 @@ if __name__ == '__main__':
     print(pred.shape,label.shape)
     sess = tf.Session()
     err = focal_loss(pred,label,2)
+    #err = entropy_loss(pred,label,2)
     er_o = sess.run(err)
-    #print('out',er_o[0],er_o[1])
+    print('out',er_o[0])
     ac = cal_accuracy(er_o[1],label)
     acc = sess.run(ac)
     print('acc',acc)

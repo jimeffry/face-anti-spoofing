@@ -17,7 +17,7 @@ from __future__ import division
 import numpy as np
 import tensorflow as tf
 import os
-from image_preprocess import short_side_resize
+from image_preprocess import short_side_resize,img_resize
 from image_preprocess import norm_data
 from convert_data_to_tfrecord import label_show
 import sys
@@ -26,7 +26,7 @@ from config import cfgs
 
 class Read_Tfrecord(object):
     def __init__(self,dataset_name,data_dir,batch_size, is_training):
-        if dataset_name not in ['Prison', 'WiderFace']:
+        if dataset_name not in ['Prison', 'WiderFace','Mobile']:
             raise ValueError('dataSet name must be in pascal, coco Prison')
         if is_training:
             tfrecord_file = os.path.join(data_dir, dataset_name,'train.tfrecord')
@@ -48,7 +48,7 @@ class Read_Tfrecord(object):
                 'img_height': tf.FixedLenFeature([], tf.int64),
                 'img_width': tf.FixedLenFeature([], tf.int64),
                 'img': tf.FixedLenFeature([], tf.string),
-                'gt': tf.FixedLenFeature([], tf.string)
+                'gt': tf.FixedLenFeature([], tf.int64)
             }
         )
         img_name = features['img_name']
@@ -57,7 +57,7 @@ class Read_Tfrecord(object):
         #print("begin to decode")
         img = tf.image.decode_jpeg(features['img'],channels=3)
         img = tf.reshape(img, shape=[img_height, img_width, 3])
-        gt_labels = tf.decode_raw(features['gt'], tf.int32)
+        gt_labels = tf.cast(features['gt'], tf.int32)
         gt_labels = tf.reshape(gt_labels, [-1])
         return img_name, img, gt_labels
 
@@ -66,14 +66,17 @@ class Read_Tfrecord(object):
             img = short_side_resize(img_tensor=img,
                                         target_shortside_len=cfgs.IMG_SHORT_SIDE_LEN,
                                         length_limitation=cfgs.IMG_MAX_LENGTH)
+        img = img_resize(img,cfgs.IMG_SIZE)
         img = tf.py_func(norm_data,[img],tf.float32)
         img.set_shape([None,None,3])
         return img
 
     def next_batch(self):
-        img_name, img_raw, gt_label = self.read_single_example_and_decode()
-        img_data = self.process_img(img_raw)
+        img_name, img_data, gt_label = self.read_single_example_and_decode()
+        img_data = self.process_img(img_data)
         #print("begin to batch")
+        img_name_batch = None
+        '''
         img_name_batch, img_batch, gt_label_batch = \
             tf.train.batch(
                        [img_name, img_data, gt_label],
@@ -81,6 +84,16 @@ class Read_Tfrecord(object):
                        capacity=1,
                        num_threads=1,
                        dynamic_pad=True)
+        '''
+        img_batch, gt_label_batch = \
+            tf.train.shuffle_batch(
+                    [img_data, gt_label],
+                    batch_size=self.batch_size,
+                    num_threads=4,
+                    capacity=2000,
+                    shapes=[[cfgs.IMG_SIZE[0],cfgs.IMG_SIZE[1],3],\
+                            [1]],
+                    min_after_dequeue=1000)
         return img_name_batch, img_batch, gt_label_batch
 
 
@@ -94,10 +107,10 @@ if __name__ == '__main__':
     try:
         for i in range(10):
             print("idx",i)
-            img,gt,name,obg = sess.run([img_batch,gtboxes_and_label_batch,img_name_batch])
+            img,gt = sess.run([img_batch,gtboxes_and_label_batch])
             print("img",np.shape(img))
-            print('gt',np.shape(gt))
-            print('name:',name)
+            print('gt',np.shape(gt),gt[0])
+            #print('name:',name)
             #print('num_obg:',obg)
             print('data',img[0,5,:5,0])
             img_dict['img_data'] = img[0]
