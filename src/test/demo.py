@@ -12,6 +12,7 @@
 import tensorflow as tf 
 import numpy as np 
 import time 
+import cv2
 import argparse
 import os 
 import sys
@@ -43,7 +44,7 @@ def args():
                         help="images saved dir")
     parser.add_argument('--failed-dir',type=str,dest='failed_dir',default="./failed_dir",\
                         help="fpr saved dir")
-    parser.add_argument('--load-epoch', default=0,dest='load_epoch', type=int,help='saved epoch num')
+    parser.add_argument('--load-epoch', default='0',dest='load_epoch', type=str,help='saved epoch num')
     parser.add_argument('--cmd-type', default="dbtest",dest='cmd_type', type=str,\
                         help="which code to run: videotest,imgtest ")
     return parser.parse_args()
@@ -53,13 +54,16 @@ def test_img(args):
     '''
     img_path1 = args.img_path1
     model_dir = args.tf_model
-    model_path = os.path.join(model_dir,cfgs.MODEL_PREFIX) + '-'+str(args.load_epoch)
-    Model = Face_Anti_Spoof(model_path,[224,224],args.gpu)
+    model_dir = os.path.join(model_dir,cfgs.DATASET_NAME)
+    model_path = os.path.join(model_dir,cfgs.MODEL_PREFIX) + '-'+args.load_epoch
+    Model = Face_Anti_Spoof(model_path,cfgs.IMG_SIZE,args.gpu)
     img_data1 = cv2.imread(img_path1)
-    fram_h,fram_w = img_data1.shape[:2]
     if img_data1 is None:
+        print('img is none')
         return None
-    pred_id = Model.inference(img_data1)
+    fram_h,fram_w = img_data1.shape[:2]
+    tmp,pred_id = Model.inference(img_data1)
+    print("pred",tmp)
     score_label = str("{:.2f}".format(pred_id))
     cv2.putText(img_data1,score_label,(int(fram_w-20),int(20)),cv2.FONT_HERSHEY_SIMPLEX,1,(0,255,0))
     cv2.imshow("video",img_data1)
@@ -68,10 +72,12 @@ def test_img(args):
 def test_video(args):
     model_dir = args.tf_model
     file_in = args.file_in
-    model_path = os.path.join(model_dir,cfgs.MODEL_PREFIX) + '-'+str(args.load_epoch)
-    Model = Face_Anti_Spoof(model_path,[224,224],args.gpu)
+    model_dir = args.tf_model
+    model_dir = os.path.join(model_dir,cfgs.DATASET_NAME)
+    model_path = os.path.join(model_dir,cfgs.MODEL_PREFIX) + '-'+args.load_epoch
+    Model = Face_Anti_Spoof(model_path,cfgs.IMG_SIZE,args.gpu)
     if file_in is None:
-        v_cap = cv2.VideoCapture(0)
+        v_cap = cv2.VideoCapture(11)
     else:
         v_cap = cv2.VideoCapture(file_in)
     cv2.namedWindow("video")
@@ -99,7 +105,7 @@ def test_video(args):
             sys.stdout.flush()
             if ret: 
                 t = time.time()
-                pred_id = Model.inference(frame)
+                _,pred_id = Model.inference(frame)
                 t_det = time.time() - t
             else:
                 continue
@@ -119,6 +125,6 @@ if __name__ == '__main__':
     if cmd_type in 'imgtest':
         test_img(parms)
     elif cmd_type in 'videotest':
-        videotest(parms)
+        test_video(parms)
     else:
         print('Please input right cmd')

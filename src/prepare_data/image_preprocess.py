@@ -88,6 +88,9 @@ def short_side_resize_for_inference_data(img_tensor, target_shortside_len, lengt
 
 
 def norm_data(img):
+    '''
+    img: should be rgb mode
+    '''
     img[:,:,0] = img[:,:,0]- cfgs.PIXEL_MEAN[0] # R
     img[:,:,1] = img[:,:,1]- cfgs.PIXEL_MEAN[1] # G
     img[:,:,2] = img[:,:,2]- cfgs.PIXEL_MEAN[2] # B
@@ -131,6 +134,8 @@ def generate_list_from_dir(dirpath,out_file,label_num):
         sys.stdout.write("\r>>convert  %d/%d" %(idx,total_))
         sys.stdout.flush()
         for img_one in imgs:
+            if len(img_one.strip()) < 9:
+                continue
             img_path = os.path.join(file_cnt,img_one)
             total_cnt+=1
             f_w.write("{} {}\n".format(img_path,label))

@@ -15,6 +15,7 @@ from scipy.spatial import distance
 import time 
 import os 
 import sys
+import cv2
 sys.path.append(os.path.join(os.path.dirname(__file__),'../configs'))
 from config import cfgs
 sys.path.append(os.path.join(os.path.dirname(__file__),'../network'))
@@ -63,9 +64,13 @@ class Face_Anti_Spoof(object):
             #tf_img = Img_Pad(img,(self.h,self.w))
         else:
             tf_img = img
+        tf_img = tf_img[:,:,::-1]
         tf_img = norm_data(tf_img)
         caffe_img = np.expand_dims(tf_img,0)
+        t = time.time()
         feat = self.sess.run([self.net_out],feed_dict={self.image_op:caffe_img})
+        t_end = time.time() - t
+        print("inference time:",t_end)
         class_num = np.argmax(feat)
         return np.array(feat),class_num
 

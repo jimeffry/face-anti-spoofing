@@ -92,10 +92,11 @@ class Img2TFrecord(object):
         save_path = os.path.join(save_dir,dataset_name)
         if not os.path.exists(save_path):
             os.makedirs(save_path)
+        self.property_file = os.path.join(save_path,'property_'+save_name+'.txt')
         save_name = save_name + '.tfrecord'
         record_save_path = os.path.join(save_path,save_name)
         self.record_w = DataToRecord(record_save_path)
-        self.property_file = os.path.join(save_path,'property.txt')
+        
 
     def rd_anotation(self,annotation):
         '''

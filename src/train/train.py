@@ -26,6 +26,7 @@ import mobilenetV2
 import resnet
 sys.path.append(os.path.join(os.path.dirname(__file__),"../prepare_data"))
 from read_tfrecord import Read_Tfrecord
+from read_multi_tfrecord import read_multi_rd
 sys.path.append(os.path.join(os.path.dirname(__file__),'../utils'))
 from get_property import load_property
 sys.path.append(os.path.join(os.path.dirname(__file__),'../losses'))
@@ -33,7 +34,7 @@ from loss import focal_loss,cal_accuracy,entropy_loss
 
 def parms():
     parser = argparse.ArgumentParser(description='SSH training')
-    parser.add_argument('--load-num',dest='load_num',type=int,default=0,help='ckpt num')
+    parser.add_argument('--load-num',dest='load_num',type=str,default=None,help='ckpt num')
     parser.add_argument('--save-weight-period',dest='save_weight_period',type=int,default=5,\
                         help='the period to save')
     parser.add_argument('--epochs',type=int,default=20000,help='train epoch nums')
@@ -53,6 +54,7 @@ def parms():
 
 def train(args):
     model_dir = args.model_dir
+    model_dir = os.path.join(model_dir,cfgs.DATASET_NAME)
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
     model_path = os.path.join(model_dir,cfgs.MODEL_PREFIX)
@@ -66,9 +68,11 @@ def train(args):
     Property = load_property(property_file)
     train_img_nums = Property['img_nums']
     class_nums = Property['cls_num']
+    # ----------------------------------------------------------------------------------------------------get rd data
     with tf.variable_scope('get_batch'):
-        tfrd = Read_Tfrecord(cfgs.DATASET_NAME,data_record_dir,batch_size,True)
-        img_name_batch, img_batch, label_batch = tfrd.next_batch()
+        img_batch,label_batch = read_multi_rd(data_record_dir,'fg','bg',batch_size)
+        #tfrd = Read_Tfrecord(cfgs.DATASET_NAME,data_record_dir,batch_size)
+        #img_name_batch, img_batch, label_batch = tfrd.next_batch()
         #gtboxes_and_label = tf.reshape(label_batch, [-1])
     # list as many types of layers as possible, even if they are not used now
     with tf.variable_scope('build_trainnet'):
@@ -81,8 +85,8 @@ def train(args):
     # ----------------------------------------------------------------------------------------------------build loss
     with tf.variable_scope('build_loss'):
         weight_decay_loss = tf.add_n(tf.losses.get_regularization_losses())
-        #cls_loss,soft_logits = focal_loss(logits,label_batch,class_nums)
-        cls_loss,soft_logits = entropy_loss(logits,label_batch,class_nums)
+        cls_loss,soft_logits = focal_loss(logits,label_batch,class_nums)
+        #cls_loss,soft_logits = entropy_loss(logits,label_batch,class_nums)
         total_loss = cls_loss + weight_decay_loss
         acc_op = cal_accuracy(soft_logits,label_batch)
     # ---------------------------------------------------------------------------------------------------add summary
@@ -118,8 +122,8 @@ def train(args):
     tf_config.log_device_placement=False
     with tf.Session(config=tf_config) as sess:
         sess.run(init_op)
-        if load_num >0:
-            model_path = "%s-%s" %(model_path,str(load_num) )
+        if load_num is not None:
+            model_path = "%s-%s" %(model_path,str(load_num))
             model_dict = '/'.join(model_path.split('/')[:-1])
             ckpt = tf.train.get_checkpoint_state(model_dict)
             print("restore model path:",model_path)

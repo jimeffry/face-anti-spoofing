@@ -137,7 +137,8 @@ def get_symble(input_image,**kargs):
         pool = GlobalAveragePooling2D(b8,name='pool')
         fc = tfc.fully_connected(pool,class_num,activation_fn=tf.nn.relu6,trainable=train_fg,\
                                     weights_regularizer=w_r,scope='fc')
-        return fc
+        dp = tfc.dropout(fc,keep_prob=0.5,is_training=train_fg,scope='drop_out')
+        return dp
 
 if __name__ == '__main__':
     graph = tf.Graph()

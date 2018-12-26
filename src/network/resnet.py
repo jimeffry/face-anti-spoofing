@@ -91,6 +91,7 @@ def res_block_seq(data_in,block_num,**kargs):
 def get_symble(input_image,**kargs):
         w_decay = kargs.get('w_decay',1e-5)
         net_name = kargs.get('net_name','resnet50')
+        train_fg = kargs.get('train_fg',True)
         class_num = kargs.get('class_num',81)
         w_r = tfc.l2_regularizer(w_decay)
         assert net_name.lower() in ['resnet50','resnet100'], "Please sel netname: resnet50 or resnet100"
@@ -115,7 +116,8 @@ def get_symble(input_image,**kargs):
         p2 = tfc.ave_pool2d(C5,7,stride=1,padding='SAME',scope='pool2')
         fc = tfc.fully_connected(p2,class_num,activation_fn=tf.nn.relu6,trainable=train_fg,\
                                     weights_regularizer=w_r,scope='fc')
-        return fc
+        dp = tfc.dropout(fc,keep_prob=0.5,is_training=train_fg,scope='drop_out')
+        return dp
 
 if __name__ == '__main__':
     graph = tf.Graph()

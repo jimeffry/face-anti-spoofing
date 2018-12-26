@@ -25,13 +25,10 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '../configs'))
 from config import cfgs
 
 class Read_Tfrecord(object):
-    def __init__(self,dataset_name,data_dir,batch_size, is_training):
+    def __init__(self,dataset_name,data_dir,batch_size, save_name='train'):
         if dataset_name not in ['Prison', 'WiderFace','Mobile']:
             raise ValueError('dataSet name must be in pascal, coco Prison')
-        if is_training:
-            tfrecord_file = os.path.join(data_dir, dataset_name,'train.tfrecord')
-        else:
-            tfrecord_file = os.path.join(data_dir, dataset_name ,'test.tfrecord')
+        tfrecord_file = os.path.join(data_dir, dataset_name,save_name+'.tfrecord')
         print('tfrecord path is -->', os.path.abspath(tfrecord_file))
         self.batch_size = batch_size
         #filename_tensorlist = tf.train.match_filenames_once(pattern)
