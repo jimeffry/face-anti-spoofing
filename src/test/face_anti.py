@@ -21,6 +21,7 @@ from config import cfgs
 sys.path.append(os.path.join(os.path.dirname(__file__),'../network'))
 import mobilenetV2
 import resnet
+import lenet5
 sys.path.append(os.path.join(os.path.dirname(__file__),'../prepare_data'))
 from image_preprocess import norm_data
 
@@ -47,13 +48,14 @@ class Face_Anti_Spoof(object):
              #   print("name : ",v_name.name[:-2],v_name.shape) 
 
     def get_base_net(self):
-        with tf.variable_scope('build_trainnet'):
-            if cfgs.NET_NAME in 'mobilenetv2':
-                logits = mobilenetV2.get_symble(self.image_op,class_num=cfgs.CLS_NUM,train_fg=False)
-            elif cfgs.NET_NAME in ['resnet50','resnet100']:
-                logits = resnet.get_symble(img_batch,class_num=cfgs.CLS_NUM,train_fg=False)
-            softmax_out=tf.nn.softmax(logits)
-            return softmax_out
+        if cfgs.NET_NAME in 'mobilenetv2':
+            logits = mobilenetV2.get_symble(self.image_op,class_num=cfgs.CLS_NUM,train_fg=False)
+        elif cfgs.NET_NAME in ['resnet50','resnet100']:
+            logits = resnet.get_symble(self.image_op,class_num=cfgs.CLS_NUM,train_fg=False)
+        elif cfgs.NET_NAME in ['lenet5','lenet']:
+            logits = lenet5.get_symble(self.image_op,class_num=cfgs.CLS_NUM,train_fg=False)
+        softmax_out=tf.nn.softmax(logits)
+        return softmax_out
 
     def inference(self,img):
         h_,w_,chal_ = img.shape

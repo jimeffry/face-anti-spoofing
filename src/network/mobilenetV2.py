@@ -123,18 +123,19 @@ def get_symble(input_image,**kargs):
     train_fg = kargs.get('train_fg',True)
     class_num = kargs.get('class_num',81)
     assert net_name.lower() in ['mobilenet','mobilenetv2'],"Please sel netname: mobilenet or mobilenetv2"
-    cn = [int(x*width_mult) for x in [32,16,24,32,64,96,160,320,1280]]
+    #cn = [int(x*width_mult) for x in [32,16,24,32,64,96,160,320,1280]]
+    cn = [int(x*width_mult) for x in [32,16,24,32,64,96,160,320,256]]
     with tf.variable_scope(net_name) :
         b0 = Conv_block(input_image,3,filter_num=cn[0],conv_stride=2,relu_type='relu6', \
                         name='cb1',w_regular=w_r,**kargs)
         b1 = Inverted_residual_seq(b0,1,cn[0],cn[1],1,1,**kargs) #1
-        b2 = Inverted_residual_seq(b1,6,cn[1],cn[2],2,2,seq_name='res2',w_regular=w_r,**kargs) #2
-        b3 = Inverted_residual_seq(b2,6,cn[2],cn[3],2,3,seq_name='res3',w_regular=w_r,**kargs) #3
-        b4 = Inverted_residual_seq(b3,6,cn[3],cn[4],2,4,seq_name='res4',w_regular=w_r,**kargs) #4
-        b5 = Inverted_residual_seq(b4,6,cn[4],cn[5],1,3,seq_name='res5',w_regular=w_r,**kargs) #3
-        b6 = Inverted_residual_seq(b5,6,cn[5],cn[6],2,3,seq_name='res6',w_regular=w_r,**kargs) #3
-        b7 = Inverted_residual_seq(b6,6,cn[6],cn[7],1,1,seq_name='res7',w_regular=w_r,**kargs) #1
-        b8 = Conv_block(b7,1,filter_num=cn[8],conv_stride=1,relu_type='relu6', \
+        b2 = Inverted_residual_seq(b1,6,cn[1],cn[2],2,1,seq_name='res2',w_regular=w_r,**kargs) #2
+        b3 = Inverted_residual_seq(b2,6,cn[2],cn[3],2,1,seq_name='res3',w_regular=w_r,**kargs) #3
+        b4 = Inverted_residual_seq(b3,6,cn[3],cn[4],2,1,seq_name='res4',w_regular=w_r,**kargs) #4
+        b5 = Inverted_residual_seq(b4,6,cn[4],cn[5],2,1,seq_name='res5',w_regular=w_r,**kargs) #3
+        #b6 = Inverted_residual_seq(b5,6,cn[5],cn[6],2,1,seq_name='res6',w_regular=w_r,**kargs) #3
+        #b7 = Inverted_residual_seq(b6,6,cn[6],cn[7],1,1,seq_name='res7',w_regular=w_r,**kargs) #1
+        b8 = Conv_block(b5,1,filter_num=cn[8],conv_stride=1,relu_type='relu6', \
                         name='cb2',**kargs)
         pool = GlobalAveragePooling2D(b8,name='pool')
         fc = tfc.fully_connected(pool,class_num,activation_fn=tf.nn.relu6,trainable=train_fg,\

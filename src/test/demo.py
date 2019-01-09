@@ -64,8 +64,8 @@ def test_img(args):
     fram_h,fram_w = img_data1.shape[:2]
     tmp,pred_id = Model.inference(img_data1)
     print("pred",tmp)
-    score_label = str("{:.2f}".format(pred_id))
-    cv2.putText(img_data1,score_label,(int(fram_w-20),int(20)),cv2.FONT_HERSHEY_SIMPLEX,1,(0,255,0))
+    score_label = "{}".format(cfgs.DATA_NAME[pred_id])
+    cv2.putText(img_data1,score_label,(int(fram_w-200),int(30)),cv2.FONT_HERSHEY_SIMPLEX,1,(0,255,0))
     cv2.imshow("video",img_data1)
     cv2.waitKey(0)
 

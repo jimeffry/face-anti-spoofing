@@ -85,7 +85,9 @@ class Img2TFrecord(object):
     def __init__(self,args):
         self.anno_file = args.anno_file
         save_dir = args.save_dir
-        dataset_name = cfgs.DATASET_NAME #args.dataset_name
+        #dataset_name = cfgs.DATASET_NAME #args.dataset_name
+        assert args.dataset_name == cfgs.DATASET_NAME,'input data name should be equal to config name'
+        dataset_name = args.dataset_name
         self.image_dir = args.image_dir
         save_name = args.save_name
         self.img_format = args.img_format

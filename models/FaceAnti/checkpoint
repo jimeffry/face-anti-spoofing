@@ -1,0 +1,3 @@
+model_checkpoint_path: "anti-40-100"
+all_model_checkpoint_paths: "anti-40-50"
+all_model_checkpoint_paths: "anti-40-100"

@@ -62,9 +62,9 @@ def get_model(img_batch,class_nums):
         logits = resnet.get_symble(img_batch,w_decay=cfgs.WEIGHT_DECAY,\
                                     class_num=class_nums,train_fg=True)
     elif cfgs.NET_NAME in ['lenet5','lenet']:
-        #logits = lenet5.get_symble(img_batch,w_decay=cfgs.WEIGHT_DECAY,\
-            #                           class_num=class_nums,train_fg=True)
-        logits = lenet5.get_symble(img_batch,class_num=class_nums)
+        logits = lenet5.get_symble(img_batch,w_decay=cfgs.WEIGHT_DECAY,\
+                                       class_num=class_nums,train_fg=True)
+        #logits = lenet5.get_symble(img_batch,class_num=class_nums)
     return logits
 
 def train(args):
@@ -100,8 +100,8 @@ def train(args):
     # ----------------------------------------------------------------------------------------------------build loss
     with tf.variable_scope('build_loss'):
         weight_decay_loss = tf.add_n(tf.losses.get_regularization_losses())
-        #cls_loss,soft_logits = focal_loss(logits,label_batch,class_nums)
-        cls_loss,soft_logits = entropy_loss(logits,label_batch,class_nums)
+        cls_loss,soft_logits = focal_loss(logits,label_batch,class_nums)
+        #cls_loss,soft_logits = entropy_loss(logits,label_batch,class_nums)
         total_loss = cls_loss + weight_decay_loss
         acc_op,label_out,pred,feature = cal_accuracy(soft_logits,label_batch)
     # ---------------------------------------------------------------------------------------------------add summary
@@ -119,7 +119,7 @@ def train(args):
     #optimizer = tf.train.AdamOptimizer(lr)
     updata_op = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
     #with tf.control_dependencies(updata_op):
-    train_op = optimizer.minimize(total_loss)
+    train_op = optimizer.minimize(total_loss,global_step)
     # ---------------------------------------------------------------------------------------------compute gradients
     #gradients = optimizer.compute_gradients(total_loss)
     # train_op
@@ -157,11 +157,10 @@ def train(args):
                     for step in range(np.ceil(train_img_nums/batch_size).astype(np.int32)):
                         training_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
                         #tmp_img,tmp_label = sess.run([img_batch,label_batch])
-                        sess.run([train_op]) 
+                        #_,_ = sess.run([train_op,global_step]) 
                         if step % cfgs.SHOW_TRAIN_INFO_INTE != 0 and step % cfgs.SMRY_ITER != 0:
-                            #_, global_stepnp = sess.run([train_op, global_step],feed_dict={img_input:tmp_img,label_input:tmp_label})
-                            #sess.run(train_op,feed_dict={img_input:tmp_img,label_input:tmp_label})
-                            pass
+                            _, global_stepnp = sess.run([train_op, global_step])
+                            #pass
                         else:
                             if step % cfgs.SHOW_TRAIN_INFO_INTE == 0 and step % cfgs.SMRY_ITER != 0:
                                 start = time.time()
