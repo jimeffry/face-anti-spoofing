@@ -207,9 +207,18 @@ def view_bar(message, num, total):
 if __name__ == '__main__':
     args = parms()
     dataset = args.dataset_name
+    '''
     if 'Prison' in dataset:
         ct = Img2TFrecord(args)
         ct.convert_widerface_to_tfrecord()
     elif 'Mobile' in dataset:
         ct = Img2TFrecord(args)
         ct.convert_widerface_to_tfrecord()
+    elif 'Face' in dataset:
+        ct = Img2TFrecord(args)
+        ct.convert_widerface_to_tfrecord()
+    else:
+        print("pleace select right dataset")
+    '''
+    ct = Img2TFrecord(args)
+    ct.convert_widerface_to_tfrecord()

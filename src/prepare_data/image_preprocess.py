@@ -134,8 +134,8 @@ def generate_list_from_dir(dirpath,out_file,label_num):
         sys.stdout.write("\r>>convert  %d/%d" %(idx,total_))
         sys.stdout.flush()
         for img_one in imgs:
-            if len(img_one.strip()) < 9:
-                continue
+            #if len(img_one.strip()) < 9:
+             #   continue
             img_path = os.path.join(file_cnt,img_one)
             total_cnt+=1
             f_w.write("{} {}\n".format(img_path,label))

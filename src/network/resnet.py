@@ -95,34 +95,35 @@ def get_symble(input_image,**kargs):
         class_num = kargs.get('class_num',81)
         w_r = tfc.l2_regularizer(w_decay)
         assert net_name.lower() in ['resnet50','resnet100'], "Please sel netname: resnet50 or resnet100"
-        #with tf.variable_scope(net_name):
-        res_base_conv = Conv_block(input_image,7,conv_stride=2,filter_num=64,relu_type='relu6',\
-                                w_regular=w_r,**kargs)
-        C1 = tfc.max_pool2d(res_base_conv,3,stride=2,padding='SAME',scope='res_base_pool')
-        C2 = res_block_seq(C1,3,kernel_num_in=64,kernel_num_out=256,w_regular=w_r,seq_name='res2',**kargs)
-        C3 = res_block_seq(C2,4,seq_stride=2,kernel_num_in=128,kernel_num_out=512,w_regular=w_r,\
-                            seq_name='res3',**kargs)
-        if 'resnet50' in net_name:
-            C4 = res_block_seq(C3,6,seq_stride=2,kernel_num_in=256,kernel_num_out=1024,w_regular=w_r,\
-                            seq_name='res4',**kargs)
-        elif 'resnet100' in net_name:
-            C4 = res_block_seq(C3,23,seq_stride=2,kernel_num_in=256,kernel_num_out=1024,w_regular=w_r,\
-                            seq_name='res4',**kargs)
-        else:
-            print("Please input net name in:[resnet50,resnet100]")
-            return None
-        C5 = res_block_seq(C4,3,seq_stride=2,kernel_num_in=512,kernel_num_out=2048,w_regular=w_r,\
-                            seq_name='res5',**kargs)
-        p2 = tfc.ave_pool2d(C5,7,stride=1,padding='SAME',scope='pool2')
-        fc = tfc.fully_connected(p2,class_num,activation_fn=tf.nn.relu6,trainable=train_fg,\
-                                    weights_regularizer=w_r,scope='fc')
-        dp = tfc.dropout(fc,keep_prob=0.5,is_training=train_fg,scope='drop_out')
-        return dp
+        with tf.variable_scope(net_name):
+            res_base_conv = Conv_block(input_image,7,conv_stride=2,filter_num=64,relu_type='relu6',\
+                                    w_regular=w_r,**kargs)
+            C1 = tfc.max_pool2d(res_base_conv,3,stride=2,padding='SAME',scope='res_base_pool')
+            C2 = res_block_seq(C1,3,kernel_num_in=64,kernel_num_out=256,w_regular=w_r,seq_name='res2',**kargs)
+            C3 = res_block_seq(C2,4,seq_stride=2,kernel_num_in=128,kernel_num_out=512,w_regular=w_r,\
+                                seq_name='res3',**kargs)
+            if 'resnet50' in net_name:
+                C4 = res_block_seq(C3,6,seq_stride=2,kernel_num_in=256,kernel_num_out=1024,w_regular=w_r,\
+                                seq_name='res4',**kargs)
+            elif 'resnet100' in net_name:
+                C4 = res_block_seq(C3,23,seq_stride=2,kernel_num_in=256,kernel_num_out=1024,w_regular=w_r,\
+                                seq_name='res4',**kargs)
+            else:
+                print("Please input net name in:[resnet50,resnet100]")
+                return None
+            C5 = res_block_seq(C4,3,seq_stride=2,kernel_num_in=512,kernel_num_out=2048,w_regular=w_r,\
+                                seq_name='res5',**kargs)
+            p2 = tfc.avg_pool2d(C5,7,stride=1,padding='SAME',scope='pool2')
+            flat = tfc.flatten(p2,scope='flat')
+            fc = tfc.fully_connected(flat,class_num,activation_fn=tf.nn.relu6,trainable=train_fg,\
+                                        weights_regularizer=w_r,scope='fc')
+            dp = tfc.dropout(fc,keep_prob=0.5,is_training=train_fg,scope='drop_out')
+            return dp
 
 if __name__ == '__main__':
     graph = tf.Graph()
     with graph.as_default():
-        img = tf.ones([1,224,224,3])
-        model = get_symble(img,net_name='resnet50')
+        img = tf.ones([64,224,224,3])
+        model = get_symble(img,class_num=3,net_name='resnet50')
         sess = tf.Session()
-        summary = tf.summary.FileWriter('/home/lxy/Develop/Center_Loss/git_prj/SSH_prj/ssh-tensorflow/logs/',sess.graph)
+        summary = tf.summary.FileWriter('/home/lxy/Develop/Center_Loss/git_prj/face-anti-spoofing/logs/',sess.graph)

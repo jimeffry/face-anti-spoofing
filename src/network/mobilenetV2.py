@@ -32,7 +32,8 @@ def Conv_block(data_in,kernel_size,**kargs):
                             trainable=train_fg,weights_regularizer=w_regular,scope='%s_conv' % name_scope)
         #bn_out = tfc.group_norm(conv_out,group_num,epsilon=eps,scope='%s_bn' % name_scope)
         if bn_use:
-            bn_out = tfc.layer_norm(bn_out,scope='%s_bn' % name_scope)
+            #bn_out = tfc.layer_norm(bn_out,scope='%s_bn' % name_scope)
+            bn_out = tfc.batch_norm(bn_out,scope='%s_bn' % name_scope)
         if relu_type == 'relu':
             act_out = tf.nn.relu(bn_out,name='%s_relu' % name_scope)
         elif relu_type == 'relu6':
@@ -59,7 +60,8 @@ def DepConv_block(data_in,kernel_size,**kargs):
         bn_out = tfc.conv2d_in_plane(data_in,kernel_size,conv_stride,activation_fn=None,\
                             trainable=train_fg,weights_regularizer=w_regular,scope='%s_dconv' % name_scope)
         if bn_use:
-            bn_out = tfc.layer_norm(bn_out,scope='%s_bn' % name_scope)
+            #bn_out = tfc.layer_norm(bn_out,scope='%s_bn' % name_scope)
+            bn_out = tfc.batch_norm(bn_out,scope='%s_bn' % name_scope)
         if relu_type == 'relu':
             act_out = tf.nn.relu(bn_out,name='%s_relu' % name_scope)
         elif relu_type == 'relu6':
@@ -125,26 +127,26 @@ def get_symble(input_image,**kargs):
     with tf.variable_scope(net_name) :
         b0 = Conv_block(input_image,3,filter_num=cn[0],conv_stride=2,relu_type='relu6', \
                         name='cb1',w_regular=w_r,**kargs)
-        b1 = Inverted_residual_seq(b0,1,cn[0],cn[1],1,1,**kargs)
-        b2 = Inverted_residual_seq(b1,6,cn[1],cn[2],2,2,seq_name='res2',w_regular=w_r,**kargs)
-        b3 = Inverted_residual_seq(b2,6,cn[2],cn[3],2,3,seq_name='res3',w_regular=w_r,**kargs)
-        b4 = Inverted_residual_seq(b3,6,cn[3],cn[4],2,4,seq_name='res4',w_regular=w_r,**kargs)
-        b5 = Inverted_residual_seq(b4,6,cn[4],cn[5],1,3,seq_name='res5',w_regular=w_r,**kargs)
-        b6 = Inverted_residual_seq(b5,6,cn[5],cn[6],2,3,seq_name='res6',w_regular=w_r,**kargs)
-        b7 = Inverted_residual_seq(b6,6,cn[6],cn[7],1,1,seq_name='res7',w_regular=w_r,**kargs)
+        b1 = Inverted_residual_seq(b0,1,cn[0],cn[1],1,1,**kargs) #1
+        b2 = Inverted_residual_seq(b1,6,cn[1],cn[2],2,2,seq_name='res2',w_regular=w_r,**kargs) #2
+        b3 = Inverted_residual_seq(b2,6,cn[2],cn[3],2,3,seq_name='res3',w_regular=w_r,**kargs) #3
+        b4 = Inverted_residual_seq(b3,6,cn[3],cn[4],2,4,seq_name='res4',w_regular=w_r,**kargs) #4
+        b5 = Inverted_residual_seq(b4,6,cn[4],cn[5],1,3,seq_name='res5',w_regular=w_r,**kargs) #3
+        b6 = Inverted_residual_seq(b5,6,cn[5],cn[6],2,3,seq_name='res6',w_regular=w_r,**kargs) #3
+        b7 = Inverted_residual_seq(b6,6,cn[6],cn[7],1,1,seq_name='res7',w_regular=w_r,**kargs) #1
         b8 = Conv_block(b7,1,filter_num=cn[8],conv_stride=1,relu_type='relu6', \
                         name='cb2',**kargs)
         pool = GlobalAveragePooling2D(b8,name='pool')
         fc = tfc.fully_connected(pool,class_num,activation_fn=tf.nn.relu6,trainable=train_fg,\
                                     weights_regularizer=w_r,scope='fc')
-        dp = tfc.dropout(fc,keep_prob=0.5,is_training=train_fg,scope='drop_out')
-        return dp
+        #dp = tfc.dropout(fc,keep_prob=0.5,is_training=train_fg,scope='drop_out')
+        return fc
 
 if __name__ == '__main__':
     graph = tf.Graph()
     with graph.as_default():
-        img = tf.ones([1,224,224,3])
-        model = get_symble(img,class_num=2,net_name='mobilenet')
+        img = tf.ones([32,224,224,3])
+        model = get_symble(img,class_num=3,net_name='mobilenet')
         sess = tf.Session()
         summary = tf.summary.FileWriter('/home/lxy/Develop/Center_Loss/git_prj/face-anti-spoofing/logs/',sess.graph)
         #out = sess.run(model)

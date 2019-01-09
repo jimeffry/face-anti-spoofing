@@ -24,16 +24,18 @@ from config import cfgs
 sys.path.append(os.path.join(os.path.dirname(__file__),'../network'))
 import mobilenetV2
 import resnet
+import lenet5
 sys.path.append(os.path.join(os.path.dirname(__file__),"../prepare_data"))
-from read_tfrecord import Read_Tfrecord
+from read_tfrecord import Read_Tfrecord, DecodeTFRecordsFile
 from read_multi_tfrecord import read_multi_rd
+from convert_data_to_tfrecord import label_show
 sys.path.append(os.path.join(os.path.dirname(__file__),'../utils'))
 from get_property import load_property
 sys.path.append(os.path.join(os.path.dirname(__file__),'../losses'))
 from loss import focal_loss,cal_accuracy,entropy_loss
 
 def parms():
-    parser = argparse.ArgumentParser(description='SSH training')
+    parser = argparse.ArgumentParser(description='Face-anti training')
     parser.add_argument('--load-num',dest='load_num',type=str,default=None,help='ckpt num')
     parser.add_argument('--save-weight-period',dest='save_weight_period',type=int,default=5,\
                         help='the period to save')
@@ -51,6 +53,19 @@ def parms():
     parser.add_argument('--data-record-dir',dest='data_record_dir',type=str,\
                         default='../../data/',help='tensorflow data record')
     return parser.parse_args()
+
+def get_model(img_batch,class_nums):
+    if cfgs.NET_NAME in ['mobilenetv2']:
+        logits = mobilenetV2.get_symble(img_batch,w_decay=cfgs.WEIGHT_DECAY,\
+                                       class_num=class_nums,train_fg=True)
+    elif cfgs.NET_NAME in ['resnet50','resnet100']:
+        logits = resnet.get_symble(img_batch,w_decay=cfgs.WEIGHT_DECAY,\
+                                    class_num=class_nums,train_fg=True)
+    elif cfgs.NET_NAME in ['lenet5','lenet']:
+        #logits = lenet5.get_symble(img_batch,w_decay=cfgs.WEIGHT_DECAY,\
+            #                           class_num=class_nums,train_fg=True)
+        logits = lenet5.get_symble(img_batch,class_num=class_nums)
+    return logits
 
 def train(args):
     model_dir = args.model_dir
@@ -70,25 +85,25 @@ def train(args):
     class_nums = Property['cls_num']
     # ----------------------------------------------------------------------------------------------------get rd data
     with tf.variable_scope('get_batch'):
-        img_batch,label_batch = read_multi_rd(data_record_dir,'fg','bg',batch_size)
-        #tfrd = Read_Tfrecord(cfgs.DATASET_NAME,data_record_dir,batch_size)
-        #img_name_batch, img_batch, label_batch = tfrd.next_batch()
-        #gtboxes_and_label = tf.reshape(label_batch, [-1])
+        if cfgs.RD_MULT:
+            img_batch,label_batch = read_multi_rd(data_record_dir,'fg','bg',batch_size)
+        else:
+            tfrd = Read_Tfrecord(cfgs.DATASET_NAME,data_record_dir,batch_size,train_img_nums)
+            _, img_batch, label_batch = tfrd.next_batch()
+            #tfrecords_name = 'fruits_train.tfrecords'
+            #Tfd = DecodeTFRecordsFile(tfrecords_name,batch_size)
+            #img_batch, label_batch = Tfd.next_batch()
+            #gtboxes_and_label = tf.reshape(label_batch, [-1])
+    # ----------------------------------------------------------------------------------------------------get model net
     # list as many types of layers as possible, even if they are not used now
-    with tf.variable_scope('build_trainnet'):
-        if cfgs.NET_NAME in 'mobilenetv2':
-            logits = mobilenetV2.get_symble(img_batch,w_decay=cfgs.WEIGHT_DECAY,\
-                                        class_num=class_nums,train_fg=True)
-        elif cfgs.NET_NAME in ['resnet50','resnet100']:
-            logits = resnet.get_symble(img_batch,w_decay=cfgs.WEIGHT_DECAY,\
-                                        class_num=class_nums,train_fg=True)
+    logits = get_model(img_batch,class_nums)
     # ----------------------------------------------------------------------------------------------------build loss
     with tf.variable_scope('build_loss'):
         weight_decay_loss = tf.add_n(tf.losses.get_regularization_losses())
-        cls_loss,soft_logits = focal_loss(logits,label_batch,class_nums)
-        #cls_loss,soft_logits = entropy_loss(logits,label_batch,class_nums)
+        #cls_loss,soft_logits = focal_loss(logits,label_batch,class_nums)
+        cls_loss,soft_logits = entropy_loss(logits,label_batch,class_nums)
         total_loss = cls_loss + weight_decay_loss
-        acc_op = cal_accuracy(soft_logits,label_batch)
+        acc_op,label_out,pred,feature = cal_accuracy(soft_logits,label_batch)
     # ---------------------------------------------------------------------------------------------------add summary
     tf.summary.scalar('LOSS/cls_loss', cls_loss)
     tf.summary.scalar('LOSS/total_loss', total_loss)
@@ -101,19 +116,17 @@ def train(args):
     tf.summary.scalar('lr', lr)
     # ---------------------------------------------------------------------------------------------------object func
     optimizer = tf.train.MomentumOptimizer(lr, momentum=cfgs.MOMENTUM)
+    #optimizer = tf.train.AdamOptimizer(lr)
     updata_op = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
-    with tf.control_dependencies(updata_op):
-        train_op = optimizer.minimize(total_loss, global_step)
+    #with tf.control_dependencies(updata_op):
+    train_op = optimizer.minimize(total_loss)
     # ---------------------------------------------------------------------------------------------compute gradients
     #gradients = optimizer.compute_gradients(total_loss)
     # train_op
     #train_op = optimizer.apply_gradients(grads_and_vars=gradients,
      #                                    global_step=global_step)
     summary_op = tf.summary.merge_all()
-    init_op = tf.group(
-        tf.global_variables_initializer(),
-        tf.local_variables_initializer()
-    )
+    init_op = tf.global_variables_initializer()
     saver = tf.train.Saver(max_to_keep=30)
     tf_config = tf.ConfigProto()
     #gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.7)
@@ -137,28 +150,37 @@ def train(args):
         if not os.path.exists(summary_path):
             os.makedirs(summary_path)
         summary_writer = tf.summary.FileWriter(summary_path, graph=sess.graph)
+        #img_dict = dict()
         try:
-            for epoch_tmp in range(epochs):
-                for step in range(np.ceil(train_img_nums/batch_size).astype(np.int32)):
-                    training_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
-                    if step % cfgs.SHOW_TRAIN_INFO_INTE != 0 and step % cfgs.SMRY_ITER != 0:
-                        _, global_stepnp = sess.run([train_op, global_step])
-                    else:
-                        if step % cfgs.SHOW_TRAIN_INFO_INTE == 0 and step % cfgs.SMRY_ITER != 0:
-                            start = time.time()
-                            _, global_stepnp, totalLoss,cls_l,acc,cur_lr = sess.run([train_op, global_step, total_loss,cls_loss,acc_op,lr])
-                            end = time.time()
-                            print(""" %s epoch:%d step:%d | per_cost_time:%.3f s | total_loss:%.3f | cls_loss:%.5f | acc:%.4f | lr:%.6f""" \
-                                % (str(training_time), epoch_tmp,global_stepnp, (end - start),totalLoss,cls_l,acc,cur_lr))
+            with tf.Graph().as_default():
+                for epoch_tmp in range(epochs):
+                    for step in range(np.ceil(train_img_nums/batch_size).astype(np.int32)):
+                        training_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
+                        #tmp_img,tmp_label = sess.run([img_batch,label_batch])
+                        sess.run([train_op]) 
+                        if step % cfgs.SHOW_TRAIN_INFO_INTE != 0 and step % cfgs.SMRY_ITER != 0:
+                            #_, global_stepnp = sess.run([train_op, global_step],feed_dict={img_input:tmp_img,label_input:tmp_label})
+                            #sess.run(train_op,feed_dict={img_input:tmp_img,label_input:tmp_label})
+                            pass
                         else:
-                            if step % cfgs.SMRY_ITER == 0:
-                                _, global_stepnp, summary_str = sess.run([train_op, global_step, summary_op])
-                                summary_writer.add_summary(summary_str, global_stepnp)
-                                summary_writer.flush()
-                if (epoch_tmp > 0 and epoch_tmp % save_weight_period == 0) or (epoch_tmp == epochs - 1):
-                    save_dir = model_path
-                    saver.save(sess, save_dir,epoch_tmp)
-                    print(' weights had been saved')
+                            if step % cfgs.SHOW_TRAIN_INFO_INTE == 0 and step % cfgs.SMRY_ITER != 0:
+                                start = time.time()
+                                label_o,pred_out,feat,global_stepnp, totalLoss,cls_l,acc,cur_lr = sess.run([label_out,pred,feature,global_step, total_loss,cls_loss,acc_op,lr])
+                                end = time.time()
+                                print('label',label_o)
+                                print('pred',pred_out)
+                                #print('feature',feat[0])
+                                print(""" %s epoch:%d step:%d | per_cost_time:%.3f s | total_loss:%.3f | cls_loss:%.5f | acc:%.4f | lr:%.6f""" \
+                                    % (str(training_time), epoch_tmp,global_stepnp, (end - start),totalLoss,cls_l,acc,cur_lr))
+                            else:
+                                if step % cfgs.SMRY_ITER == 0:
+                                    global_stepnp, summary_str = sess.run([global_step, summary_op])
+                                    summary_writer.add_summary(summary_str, global_stepnp)
+                                    summary_writer.flush()
+                    if (epoch_tmp > 0 and epoch_tmp % save_weight_period == 0) or (epoch_tmp == epochs - 1):
+                        save_dir = model_path
+                        saver.save(sess, save_dir,epoch_tmp)
+                        print(' weights had been saved')
         except tf.errors.OutOfRangeError:
             print("Trianing is over")
         finally:

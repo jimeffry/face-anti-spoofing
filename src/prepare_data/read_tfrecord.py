@@ -25,12 +25,13 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '../configs'))
 from config import cfgs
 
 class Read_Tfrecord(object):
-    def __init__(self,dataset_name,data_dir,batch_size, save_name='train'):
-        if dataset_name not in ['Prison', 'WiderFace','Mobile']:
+    def __init__(self,dataset_name,data_dir,batch_size,sample_num, save_name='train'):
+        if dataset_name not in cfgs.DATASET_LIST:
             raise ValueError('dataSet name must be in pascal, coco Prison')
         tfrecord_file = os.path.join(data_dir, dataset_name,save_name+'.tfrecord')
         print('tfrecord path is -->', os.path.abspath(tfrecord_file))
         self.batch_size = batch_size
+        self.sample_num = sample_num
         #filename_tensorlist = tf.train.match_filenames_once(pattern)
         #self.filename_queue = tf.train.string_input_producer(filename_tensorlist)
         self.filename_queue = tf.train.string_input_producer([tfrecord_file],shuffle=True)
@@ -87,12 +88,39 @@ class Read_Tfrecord(object):
                     [img_data, gt_label],
                     batch_size=self.batch_size,
                     num_threads=4,
-                    capacity=2000,
+                    capacity=self.sample_num+self.batch_size,
                     shapes=[[cfgs.IMG_SIZE[0],cfgs.IMG_SIZE[1],3],\
                             [1]],
-                    min_after_dequeue=1000)
+                    min_after_dequeue=self.sample_num)
         return img_name_batch, img_batch, gt_label_batch
 
+class DecodeTFRecordsFile(object):
+    def __init__(self,tfrecords_name,batch_size):
+        self.batch_size = batch_size
+        self.file_queue = tf.train.string_input_producer([tfrecords_name])
+        self.reader = tf.TFRecordReader()
+
+    def read_single_example_and_decode(self):
+        _,serialized_example = self.reader.read(self.file_queue)
+        features = tf.parse_single_example(
+            serialized_example,
+            features = {
+                'label':tf.FixedLenFeature([],tf.int64),
+                'image_raw':tf.FixedLenFeature([],tf.string)
+            }
+        )
+        img = tf.decode_raw(features['image_raw'],tf.uint8)
+        img = tf.reshape(img,[32,32,3])
+        img = tf.cast(img,tf.float32)*(1./255)-0.5
+        label = tf.cast(features['label'], tf.int32)
+        return  img,label
+    def next_batch(self):
+        img_data, gt_label = self.read_single_example_and_decode()
+        images,labels = tf.train.shuffle_batch([img_data,gt_label],
+                                               batch_size=self.batch_size,
+                                               capacity=47585+self.batch_size,
+                                               min_after_dequeue=47585)
+        return images,labels
 
 if __name__ == '__main__':
     img_dict = dict()
