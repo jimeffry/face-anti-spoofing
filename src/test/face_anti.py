@@ -72,7 +72,7 @@ class Face_Anti_Spoof(object):
         t = time.time()
         feat = self.sess.run([self.net_out],feed_dict={self.image_op:caffe_img})
         t_end = time.time() - t
-        print("inference time:",t_end)
+        #print("inference time:",t_end)
         class_num = np.argmax(feat)
         return np.array(feat),class_num
 

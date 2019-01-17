@@ -49,16 +49,16 @@ def Max_pool2d(data_in,ker_size,step,name):
     return tfc.max_pool2d(data_in,ker_size,step,'SAME',scope=name)
 
 def Lenet5(input_data,**kargs):
-    conv1 = Conv_block(input_data,3,32,name='conv1',**kargs)
-    poo1 = Max_pool2d(conv1,2,2,'pool1')
-    conv2 = Conv_block(poo1,3,64,name='conv2',**kargs)
-    pool2 = Max_pool2d(conv2,2,2,'pool2')
-    conv3 = Conv_block(pool2,3,128,name='conv3',**kargs)
-    pool3 = Max_pool2d(conv3,2,2,'pool3')
-    conv4 = Conv_block(pool3,3,256,name='conv4',**kargs)
-    pool4 = Max_pool2d(conv4,2,2,'pool4')
-    conv5 = Conv_block(pool4,3,512,name='conv5',**kargs)
-    pool5 = Max_pool2d(conv5,2,2,'pool5')
+    conv1 = Conv_block(input_data,11,96,conv_stride=4,name='conv1',**kargs)
+    poo1 = Max_pool2d(conv1,3,2,'pool1')
+    conv2 = Conv_block(poo1,5,256,name='conv2',**kargs)
+    pool2 = Max_pool2d(conv2,3,2,'pool2')
+    conv3 = Conv_block(pool2,3,384,name='conv3',**kargs)
+    #pool3 = Max_pool2d(conv3,2,2,'pool3')
+    conv4 = Conv_block(conv3,3,384,name='conv4',**kargs)
+    #pool4 = Max_pool2d(conv4,2,2,'pool4')
+    conv5 = Conv_block(conv4,3,256,name='conv5',**kargs)
+    pool5 = Max_pool2d(conv5,3,2,'pool5')
     return pool5
 
 def get_symble(input_image,**kargs):

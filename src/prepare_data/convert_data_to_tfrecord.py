@@ -109,6 +109,8 @@ class Img2TFrecord(object):
         self.img_prefix = annotation[0]
         #gt
         self.label = string.atoi(annotation[1])
+        if int(self.label) != 0:
+            return None
         #load image
         img_path = os.path.join(self.image_dir, self.img_prefix)
         if not os.path.exists(img_path):
@@ -159,7 +161,7 @@ class Img2TFrecord(object):
         for count,tmp in enumerate(anno_lines):
             img_dict = self.rd_anotation(tmp)
             if img_dict is None:
-                print("the img path is none:",tmp.strip().split()[0])
+                #print("the img path is none:",tmp.strip().split()[0])
                 continue
             self.record_w.write_recore(img_dict)
             #label_show(img_dict,'bgr')

@@ -95,6 +95,10 @@ def get_symble(input_image,**kargs):
         class_num = kargs.get('class_num',81)
         w_r = tfc.l2_regularizer(w_decay)
         assert net_name.lower() in ['resnet50','resnet100'], "Please sel netname: resnet50 or resnet100"
+        if net_name.lower() == 'resnet18':
+            block_num_list = [2,2,2,2]
+        elif net_name.lower() == 'resnet34':
+            block_num_list = [3,4,6,3]
         with tf.variable_scope(net_name):
             res_base_conv = Conv_block(input_image,7,conv_stride=2,filter_num=64,relu_type='relu6',\
                                     w_regular=w_r,**kargs)

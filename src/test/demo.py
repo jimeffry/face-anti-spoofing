@@ -16,6 +16,7 @@ import cv2
 import argparse
 import os 
 import sys
+from tqdm import tqdm
 sys.path.append(os.path.join(os.path.dirname(__file__),'../configs'))
 from config import cfgs
 from face_anti import Face_Anti_Spoof
@@ -25,14 +26,14 @@ def args():
     parser = argparse.ArgumentParser(description="mtcnn caffe")
     parser.add_argument('--file-in',type=str,dest='file_in',default='None',\
                         help="the file input path")
+    parser.add_argument('--out-file',type=str,dest='out_file',default='None',\
+                        help="the file output path")
     parser.add_argument('--data-file',type=str,dest='data_file',default='None',\
                         help="the file input path")
     parser.add_argument('--min-size',type=int,dest='min_size',default=50,\
                         help="scale img size")
     parser.add_argument('--img-path1',type=str,dest='img_path1',default="test1.jpg",\
                         help="img1 saved path")
-    parser.add_argument('--img-path2',type=str,dest='img_path2',default="test2.jpg",\
-                        help="scale img size")
     parser.add_argument('--base-dir',type=str,dest='base_dir',default="./base_dir",\
                         help="images saved dir")
     parser.add_argument('--caffemodel',type=str,dest='m_path',default="../models/deploy.caffemodel",\
@@ -65,9 +66,81 @@ def test_img(args):
     tmp,pred_id = Model.inference(img_data1)
     print("pred",tmp)
     score_label = "{}".format(cfgs.DATA_NAME[pred_id])
-    cv2.putText(img_data1,score_label,(int(fram_w-200),int(30)),cv2.FONT_HERSHEY_SIMPLEX,1,(0,255,0))
+    cv2.putText(img_data1,score_label,(int(20),int(30)),cv2.FONT_HERSHEY_SIMPLEX,1,(0,255,0))
     cv2.imshow("video",img_data1)
     cv2.waitKey(0)
+
+def display(img,id):
+    fram_h,fram_w = img.shape[:2]
+    score_label = "{}".format(cfgs.DATA_NAME[id])
+    cv2.putText(img,score_label,(int(20),int(30)),cv2.FONT_HERSHEY_SIMPLEX,1,(0,255,0))
+    cv2.imshow("video",img)
+    cv2.waitKey(0)
+
+def evalue(args):
+    '''
+    calculate the tpr and fpr for all classes
+    R = tpr = tp/(tp+fn)
+    fpr = fp/(fp+tn)
+    P = tp/(tp+fp)
+    '''
+    file_in = args.file_in
+    result_out = args.out_file
+    img_dir = args.base_dir
+    model_dir = args.tf_model
+    model_dir = os.path.join(model_dir,cfgs.DATASET_NAME)
+    model_path = os.path.join(model_dir,cfgs.MODEL_PREFIX) + '-'+args.load_epoch
+    Model = Face_Anti_Spoof(model_path,cfgs.IMG_SIZE,args.gpu)
+    if file_in is None:
+        print("input file is None",file_in)
+        return None
+    file_rd = open(file_in,'r')
+    file_wr = open(result_out,'w')
+    file_cnts = file_rd.readlines()
+    total_num = len(file_cnts)
+    statistics_dic = dict()
+    for name in cfgs.DATA_NAME:
+        statistics_dic[name+'_tpr'] = 0
+        statistics_dic[name+'_fpr'] = 0
+        statistics_dic[name] = 0
+    for i in tqdm(range(total_num)):
+        item_cnt = file_cnts[i]
+        item_spl = item_cnt.strip().split()
+        img_path,real_label = item_spl[:]
+        img_path = os.path.join(img_dir,img_path)
+        img_data = cv2.imread(img_path)
+        if img_data is None:
+            print('img is none',img_path)
+            continue
+        probility,pred_id = Model.inference(img_data)
+        pred_name = cfgs.DATA_NAME[pred_id]
+        real_name = cfgs.DATA_NAME[int(real_label)]
+        statistics_dic[real_name] +=1
+        if pred_id == int(real_label):
+            statistics_dic[pred_name+'_tpr'] +=1
+        else:
+            statistics_dic[pred_name+'_fpr'] +=1
+        if cfgs.ShowImg:
+            display(img_data,pred_id)
+    for key_name in cfgs.DATA_NAME:
+        tp_fn = statistics_dic[key_name]
+        tp = statistics_dic[key_name+'_tpr']
+        fp = statistics_dic[key_name+'_fpr']
+        fp_tn = total_num - tp_fn
+        tpr = float(tp) / tp_fn
+        fpr = float(fp) / fp_tn
+        precision = float(tp) / (tp+fp+1)
+        statistics_dic[key_name+'_tpr'] = tpr
+        statistics_dic[key_name+'_fpr'] = fpr
+        statistics_dic[key_name+'_P'] = precision
+        file_wr.write('{} result is: tp_fn-{},fp_tn-{},tp-{},fp-{}\n'.format(key_name,\
+                        tp_fn,fp_tn,tp,fp))
+        file_wr.write('\t tpr:{}  fpr:{}  Precision:{}\n'.format(tpr,fpr,precision))
+    file_rd.close()
+    file_wr.close()
+
+
+
 
 def test_video(args):
     model_dir = args.tf_model
@@ -126,5 +199,7 @@ if __name__ == '__main__':
         test_img(parms)
     elif cmd_type in 'videotest':
         test_video(parms)
+    elif cmd_type in 'filetest':
+        evalue(parms)
     else:
         print('Please input right cmd')

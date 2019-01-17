@@ -86,7 +86,7 @@ def train(args):
     # ----------------------------------------------------------------------------------------------------get rd data
     with tf.variable_scope('get_batch'):
         if cfgs.RD_MULT:
-            img_batch,label_batch = read_multi_rd(data_record_dir,'fg','bg',batch_size)
+            img_batch,label_batch = read_multi_rd(data_record_dir,'fg','bg',batch_size,train_img_nums,1.0/class_nums)
         else:
             tfrd = Read_Tfrecord(cfgs.DATASET_NAME,data_record_dir,batch_size,train_img_nums)
             _, img_batch, label_batch = tfrd.next_batch()
@@ -100,8 +100,8 @@ def train(args):
     # ----------------------------------------------------------------------------------------------------build loss
     with tf.variable_scope('build_loss'):
         weight_decay_loss = tf.add_n(tf.losses.get_regularization_losses())
-        cls_loss,soft_logits = focal_loss(logits,label_batch,class_nums)
-        #cls_loss,soft_logits = entropy_loss(logits,label_batch,class_nums)
+        #cls_loss,soft_logits = focal_loss(logits,label_batch,class_nums)
+        cls_loss,soft_logits = entropy_loss(logits,label_batch,class_nums)
         total_loss = cls_loss + weight_decay_loss
         acc_op,label_out,pred,feature = cal_accuracy(soft_logits,label_batch)
     # ---------------------------------------------------------------------------------------------------add summary
