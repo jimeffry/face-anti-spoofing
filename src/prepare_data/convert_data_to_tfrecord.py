@@ -109,8 +109,8 @@ class Img2TFrecord(object):
         self.img_prefix = annotation[0]
         #gt
         self.label = string.atoi(annotation[1])
-        if int(self.label) != 0:
-            return None
+        #if int(self.label) != 0:
+         #   return None
         #load image
         img_path = os.path.join(self.image_dir, self.img_prefix)
         if not os.path.exists(img_path):

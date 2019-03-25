@@ -61,18 +61,24 @@ def evalu_img(args):
     model_dir = args.model_dir
     cv2.namedWindow("test")
     cv2.moveWindow("test",1400,10)
-    threshold = np.array([0.3,0.3,0.7])
     base_name = "test_img"
     save_dir = './output'
     crop_size = [112,112]
-    detect_model = MTCNNDet(min_size,threshold,model_dir)
+    FaceAnti_model_dir = os.path.join(model_dir,cfgs.DATASET_NAME)
+    model_path = os.path.join(FaceAnti_model_dir,cfgs.MODEL_PREFIX)
+    FaceAnti_Model = Face_Anti_Spoof(model_path,args.load_epoch,cfgs.IMG_SIZE,args.gpu,layer='fc')
+    caffe_mode_dir = os.path.join(model_dir,'FaceDetect')
+    threshold = np.array([0.7,0.8,0.95])
+    Detect_Model = MTCNNDet(min_size,threshold,caffe_mode_dir)
     img = cv2.imread(imgpath)
     h,w = img.shape[:2]
     if cfgs.img_downsample and h > 1000:
         img = img_ratio(img,240)
-    rectangles = detect_model.detectFace(img)
+    rectangles = Detect_Model.detectFace(img)
     #draw = img.copy()
     if len(rectangles)>0:
+        rectangles = sort_box(rectangles)
+        '''
         points = np.array(rectangles)
         #print('rec shape',points.shape)
         points = points[:,5:]
@@ -83,7 +89,10 @@ def evalu_img(args):
             #img_out = cv2.resize(img_out,(96,112))
             #cv2.imshow("test",img_out)
             cv2.imwrite(savepath,img_out)
-        label_show(img,rectangles)
+        '''
+        img_verify = img_crop(img,rectangles[0],img.shape[1],img.shape[0])
+        tmp,pred_id = FaceAnti_Model.inference(img_verify)
+        label_show(img,rectangles,pred_id)
     else:
         print("No face detected")
     cv2.imshow("test",img)
@@ -164,10 +173,12 @@ def save_cropfromtxt(args):
     f_ = open(file_in,'r')
     failed_w = open('./output/failed_face3.txt','w')
     lines_ = f_.readlines()
-    threshold = np.array([0.3,0.3,0.7])
-    detect_model = MTCNNDet(min_size,threshold,model_dir) 
-    #model_path = "../models/haarcascade_frontalface_default.xml"
-    #detect_model = FaceDetector_Opencv(model_path)
+    FaceAnti_model_dir = os.path.join(model_dir,cfgs.DATASET_NAME)
+    model_path = os.path.join(FaceAnti_model_dir,cfgs.MODEL_PREFIX)
+    FaceAnti_Model = Face_Anti_Spoof(model_path,args.load_epoch,cfgs.IMG_SIZE,args.gpu,layer='fc')
+    caffe_mode_dir = os.path.join(model_dir,'FaceDetect')
+    threshold = np.array([0.7,0.8,0.95])
+    Detect_Model = MTCNNDet(min_size,threshold,caffe_mode_dir)
     mk_dirs(save_dir)
     idx_cnt = 0 
     if cfgs.show:
@@ -189,7 +200,7 @@ def save_cropfromtxt(args):
         line_s = line_1.split("/")  
         img_name = line_s[-1]
         new_dir = '/'.join(line_s[:-1]) 
-        rectangles = detect_model.detectFace(img)
+        rectangles = Detect_Model.detectFace(img)
         if len(rectangles)> 0:
             idx_cnt+=1
             rectangles = sort_box(rectangles)
@@ -210,12 +221,12 @@ def save_cropfromtxt(args):
                     img_out = cv2.resize(img_out,(crop_size[1],crop_size[0]))
             savepath = os.path.join(save_dir,line_1)
             '''
-            cv2.imwrite(savepath,img_out)
-            cv2.waitKey(10)
+            img_verify = img_crop(img,rectangles[0],img.shape[1],img.shape[0])
+            tmp,pred_id = FaceAnti_Model.inference(img_verify)
             #cv2.imwrite(savepath,img)
             if cfgs.show:
-                label_show(img,rectangles)
-                cv2.imshow("crop",img_out)
+                label_show(img,rectangles,pred_id)
+                cv2.imshow("crop",img_verify)
                 cv2.waitKey(1000)
         else:
             failed_w.write(img_path)
