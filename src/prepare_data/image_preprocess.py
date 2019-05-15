@@ -8,6 +8,7 @@ import tensorflow as tf
 import numpy as np
 import sys 
 import os 
+import csv
 import argparse
 sys.path.append(os.path.join(os.path.dirname(__file__), '../configs'))
 from config import cfgs
@@ -171,13 +172,21 @@ def merge2trainfile(file1,file2,file_out):
     id_files = f1.readlines()
     imgs = f2.readlines()
     max_num = int(max(len(id_files),len(imgs)))
-    for i in range(max_num):
-        if i <= len(id_files)-1:
-            f_out.write(id_files[i].strip())
-            f_out.write("\n")
-        if i <= len(imgs)-1:
-            f_out.write(imgs[i].strip())
-            f_out.write("\n")
+    keys = id_files[0].strip().split()
+    keys = ','.join(keys)
+    f_out.write("{}\n".format(keys))
+    for i in range(1,max_num):
+        file1 = id_files[i].strip()
+        file2 = imgs[i-1].strip()
+        f_s1 = file1.split()
+        f_s2 = file2.split()
+        if f_s1[0]==f_s2[0]:
+            sub_name = '/'.join([f_s2[1],f_s2[0]])
+            sub_txt = ','.join(f_s1[1:])
+            sub_txt = ','.join([sub_name,sub_txt])
+            f_out.write("{}\n".format(sub_txt))
+        else:
+            print("not equal",f_s1[0],f_s2[0])
     f1.close()
     f2.close()
     f_out.close()
@@ -207,6 +216,109 @@ def merge2change(file1,file2,file_out,label_num):
     f_out.close()
     print("over")
 
+def generate_train_label(file_in,fileout):
+    '''
+    file_in: input_label csv file
+    fileout: ouput train file
+    '''
+    f_in = open(file_in,'rb')
+    f_out = open(fileout,'w')
+    record = open('./output/record.txt','w')
+    reader = csv.DictReader(f_in)
+    label_keys = cfgs.FaceProperty
+    # = ['No_Beard','Mustache','Goatee']
+    hair_keys = ['Black_Hair','Blond_Hair','Brown_Hair','Gray_Hair']
+    label_head = ['Bangs','Bald']
+    cnt_dict = dict()
+    for f_item in reader:
+        print(f_item.keys())
+        tmp_label = []
+        img_name = f_item['5_o_Clock_Shadow']
+        tmp_label.append(img_name)
+        #beard
+        if int(f_item['no_beard']) == 1: 
+            label_beard = '0'
+            cur_cnt = cnt_dict.setdefault('no_beard',0)
+            cnt_dict['no_beard'] = cur_cnt+1
+        elif int(f_item['Mustache']) == 1:
+            label_beard = '1'
+            #cnt_dict['mustache']+=1
+            cur_cnt = cnt_dict.setdefault('mustache',0)
+            cnt_dict['mustache'] = cur_cnt+1
+        elif int(f_item['Goatee'])==1:
+            label_beard = '2'
+            #cnt_dict['goatee']+=1
+            cur_cnt = cnt_dict.setdefault('goatee',0)
+            cnt_dict['goatee'] = cur_cnt+1
+        else:
+            label_beard = '3'
+            cnt_dict['has_beard']+=1
+            cur_cnt = cnt_dict.setdefault('mustache',0)
+            cnt_dict['mustache'] = cur_cnt+1
+        tmp_label.append[label_beard]
+        #hair
+        label_hair = '0'
+        for tmp_key in hair_keys:
+            if int(f_item[tmp_key])==1:
+                label_hair = hair_keys.index(tmp_key)+1
+                cur_cnt = cnt_dict.setdefault(tmp_key,0)
+                cnt_dict[tmp_key] = cur_cnt+1
+        if int(f_item['Black_Hair'])==1:
+            label_hair = '1'
+            cnt_dict['balck_hair']+=1
+            cur_cnt = cnt_dict.setdefault('mustache',0)
+            cnt_dict['mustache'] = cur_cnt+1
+        elif int(f_item['Blond_Hair'])==1:
+            label_hair = '2'
+            cnt_dict['blond_hair']+=1
+            cur_cnt = cnt_dict.setdefault('mustache',0)
+            cnt_dict['mustache'] = cur_cnt+1
+        elif int(f_item['Brown_Hair'])==1:
+            label_hair = '3'
+            cnt_dict['brown_hair']+=1
+            cur_cnt = cnt_dict.setdefault('mustache',0)
+            cnt_dict['mustache'] = cur_cnt+1
+        elif int(f_item['Gray_Hair'])==1:
+            label_hair = '4'
+            cnt_dict['gray_hair']+=1
+            cur_cnt = cnt_dict.setdefault('mustache',0)
+            cnt_dict['mustache'] = cur_cnt+1
+        else:
+            label_hair = '0'
+            cnt_dict['other_hair']+=1
+            cur_cnt = cnt_dict.setdefault('mustache',0)
+            cnt_dict['mustache'] = cur_cnt+1
+        tmp_label.append(label_hair)
+        #head
+        if int(f_item['Bangs'])==1:
+            label_head = '1'
+            cnt_dict['bangs']+=1
+            cur_cnt = cnt_dict.setdefault('mustache',0)
+            cnt_dict['mustache'] = cur_cnt+1
+        elif int(f_item['Bald'])==1:
+            label_head = '2'
+            cnt_dict['bald']+=1
+            cur_cnt = cnt_dict.setdefault('mustache',0)
+            cnt_dict['mustache'] = cur_cnt+1
+        else:
+            label_head = '0'
+            cnt_dict['other_head']+=1
+        tmp_label.append(label_head)
+        #other property
+        for tmp_key in label_keys:
+            if int(f_item[tmp_key])==1:
+                tmp_label.append('1')
+                cnt_dict[tmp_key+'_p']+=1
+            else:
+                tmp_label.append('0')
+                cnt_dict[tmp_key+'_n']+=1
+        f_out.write("{}\n".format(tmp_label))
+        #print(f_item['filename'])
+    f_in.close()
+    f_out.close()  
+    for key in cnt_dict.keys():
+        record.write(key+' :'+str(cnt_dict[key])+'\n')
+
 if __name__ == "__main__":
     args = parms()
     txt_file = args.file_in
@@ -225,3 +337,5 @@ if __name__ == "__main__":
         generate_list_from_dir(img_dir,out_file,label)
     elif cmd_type in 'merge2change':
         merge2change(txt_file,file2_in,out_file,label)
+    elif cmd_type == 'gen_trainlabel':
+        generate_train_label(txt_file,out_file)
