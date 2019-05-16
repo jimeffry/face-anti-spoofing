@@ -17,11 +17,12 @@ cfgs = EasyDict()
 #------------------------------------------ convert data to tfrecofr config
 cfgs.BIN_DATA = 0 # whether read image data from binary
 cfgs.CLS_NUM = 4 #inlcude background:0, mobile:1  tv:2 remote-control:3
-cfgs.Beard = ['No_Beard','Mustache','Goatee','Beard']
+cfgs.Beard = ['No_Beard','Mustache','Goatee','5_o_Clock_Shadow','Beard']
 cfgs.Hair = ['Other_color','Black','Blond','Brown','Gray']
 cfgs.Head = ['normal','Bangs','Bald']
-cfgs.FaceProperty = ['Male','Wearing_Hat','Wearing_Earrings','Wearing_Necklace','Wearing_Necktie',\
-            'Eyeglasses','Young','Smiling','Arched_Eyebrows','Bushy_Eyebrows','Blurry']
+cfgs.FaceProperty = ['No_Beard','Mustache','Goatee','5_o_Clock_Shadow','Black_Hair','Blond_Hair','Brown_Hair','Gray_Hair','Bangs','Bald', \
+        'Male','Wearing_Hat','Wearing_Earrings','Wearing_Necklace','Wearing_Necktie',\
+        'Eyeglasses','Young','Smiling','Arched_Eyebrows','Bushy_Eyebrows','Blurry']
 # ---------------------------------------- System_config
 cfgs.NET_NAME = 'lenet5'#'resnet100'  # 'mobilenetv2' 'resnet50' 'lenet5'
 cfgs.SHOW_TRAIN_INFO_INTE = 100

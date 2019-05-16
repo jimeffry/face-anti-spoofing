@@ -173,6 +173,7 @@ def merge2trainfile(file1,file2,file_out):
     imgs = f2.readlines()
     max_num = int(max(len(id_files),len(imgs)))
     keys = id_files[0].strip().split()
+    print(len(keys))
     keys = ','.join(keys)
     f_out.write("{}\n".format(keys))
     for i in range(1,max_num):
@@ -226,96 +227,73 @@ def generate_train_label(file_in,fileout):
     record = open('./output/record.txt','w')
     reader = csv.DictReader(f_in)
     label_keys = cfgs.FaceProperty
-    # = ['No_Beard','Mustache','Goatee']
-    hair_keys = ['Black_Hair','Blond_Hair','Brown_Hair','Gray_Hair']
-    label_head = ['Bangs','Bald']
+    #beard_keys = ['No_Beard','Mustache','Goatee','5_o_Clock_Shadow']
+    #hair_keys = ['Black_Hair','Blond_Hair','Brown_Hair','Gray_Hair']
+    #head_keys = ['Bangs','Bald']
     cnt_dict = dict()
+    cnt_err=0
     for f_item in reader:
-        print(f_item.keys())
+        #print(f_item.keys())
         tmp_label = []
-        img_name = f_item['5_o_Clock_Shadow']
+        img_name = f_item['filename']
         tmp_label.append(img_name)
+        '''
         #beard
-        if int(f_item['no_beard']) == 1: 
-            label_beard = '0'
-            cur_cnt = cnt_dict.setdefault('no_beard',0)
-            cnt_dict['no_beard'] = cur_cnt+1
-        elif int(f_item['Mustache']) == 1:
-            label_beard = '1'
-            #cnt_dict['mustache']+=1
-            cur_cnt = cnt_dict.setdefault('mustache',0)
-            cnt_dict['mustache'] = cur_cnt+1
-        elif int(f_item['Goatee'])==1:
-            label_beard = '2'
-            #cnt_dict['goatee']+=1
-            cur_cnt = cnt_dict.setdefault('goatee',0)
-            cnt_dict['goatee'] = cur_cnt+1
-        else:
-            label_beard = '3'
-            cnt_dict['has_beard']+=1
-            cur_cnt = cnt_dict.setdefault('mustache',0)
-            cnt_dict['mustache'] = cur_cnt+1
-        tmp_label.append[label_beard]
+        label_beard = '4'
+        for tmp_key in beard_keys:
+            if int(f_item[tmp_key])==1:
+                label_beard = str(beard_keys.index(tmp_key))
+                cur_cnt = cnt_dict.setdefault(tmp_key,0)
+                cnt_dict[tmp_key] = cur_cnt+1
+                break
+        if label_beard == '4':
+            cur_cnt = cnt_dict.setdefault('has_beard',0)
+            cnt_dict['has_beard'] = cur_cnt+1
+        tmp_label.append(label_beard)
         #hair
         label_hair = '0'
         for tmp_key in hair_keys:
             if int(f_item[tmp_key])==1:
-                label_hair = hair_keys.index(tmp_key)+1
+                label_hair = str(hair_keys.index(tmp_key)+1)
                 cur_cnt = cnt_dict.setdefault(tmp_key,0)
                 cnt_dict[tmp_key] = cur_cnt+1
-        if int(f_item['Black_Hair'])==1:
-            label_hair = '1'
-            cnt_dict['balck_hair']+=1
-            cur_cnt = cnt_dict.setdefault('mustache',0)
-            cnt_dict['mustache'] = cur_cnt+1
-        elif int(f_item['Blond_Hair'])==1:
-            label_hair = '2'
-            cnt_dict['blond_hair']+=1
-            cur_cnt = cnt_dict.setdefault('mustache',0)
-            cnt_dict['mustache'] = cur_cnt+1
-        elif int(f_item['Brown_Hair'])==1:
-            label_hair = '3'
-            cnt_dict['brown_hair']+=1
-            cur_cnt = cnt_dict.setdefault('mustache',0)
-            cnt_dict['mustache'] = cur_cnt+1
-        elif int(f_item['Gray_Hair'])==1:
-            label_hair = '4'
-            cnt_dict['gray_hair']+=1
-            cur_cnt = cnt_dict.setdefault('mustache',0)
-            cnt_dict['mustache'] = cur_cnt+1
-        else:
-            label_hair = '0'
-            cnt_dict['other_hair']+=1
-            cur_cnt = cnt_dict.setdefault('mustache',0)
-            cnt_dict['mustache'] = cur_cnt+1
+                break
+        if label_hair=='0':
+            #cnt_dict['other_hair']+=1
+            cur_cnt = cnt_dict.setdefault('other_hair',0)
+            cnt_dict['other_hair'] = cur_cnt+1
         tmp_label.append(label_hair)
         #head
-        if int(f_item['Bangs'])==1:
-            label_head = '1'
-            cnt_dict['bangs']+=1
-            cur_cnt = cnt_dict.setdefault('mustache',0)
-            cnt_dict['mustache'] = cur_cnt+1
-        elif int(f_item['Bald'])==1:
-            label_head = '2'
-            cnt_dict['bald']+=1
-            cur_cnt = cnt_dict.setdefault('mustache',0)
-            cnt_dict['mustache'] = cur_cnt+1
-        else:
-            label_head = '0'
-            cnt_dict['other_head']+=1
+        label_head = '0'
+        for tmp_key in head_keys:
+            if int(f_item[tmp_key])==1:
+                label_head = str(head_keys.index(tmp_key)+1)
+                cur_cnt = cnt_dict.setdefault(tmp_key,0)
+                cnt_dict[tmp_key] = cur_cnt+1
+                break
+        if label_head == '0':
+            cur_cnt = cnt_dict.setdefault('normal_head',0)
+            cnt_dict['normal_head'] = cur_cnt+1
         tmp_label.append(label_head)
+        '''
         #other property
         for tmp_key in label_keys:
             if int(f_item[tmp_key])==1:
                 tmp_label.append('1')
-                cnt_dict[tmp_key+'_p']+=1
+                cur_cnt = cnt_dict.setdefault(tmp_key+'_p',0)
+                cnt_dict[tmp_key+'_p'] = cur_cnt +1
             else:
                 tmp_label.append('0')
-                cnt_dict[tmp_key+'_n']+=1
+                cur_cnt = cnt_dict.setdefault(tmp_key+'_n',0)
+                cnt_dict[tmp_key+'_n'] = cur_cnt +1
+        #if int(f_item['Arched_Eyebrows'])==1 and int(f_item['Bushy_Eyebrows'])==1:
+         #   cnt_err+=1
+        tmp_label = ','.join(tmp_label)
         f_out.write("{}\n".format(tmp_label))
         #print(f_item['filename'])
     f_in.close()
     f_out.close()  
+    #print(cnt_err)
     for key in cnt_dict.keys():
         record.write(key+' :'+str(cnt_dict[key])+'\n')
 
