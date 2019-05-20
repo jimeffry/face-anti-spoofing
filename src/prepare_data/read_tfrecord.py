@@ -46,7 +46,7 @@ class Read_Tfrecord(object):
                 'img_height': tf.FixedLenFeature([], tf.int64),
                 'img_width': tf.FixedLenFeature([], tf.int64),
                 'img': tf.FixedLenFeature([], tf.string),
-                'gt': tf.FixedLenFeature([], tf.int64)
+                'gt': tf.FixedLenFeature([cfgs.CLS_NUM], tf.int64)
             }
         )
         img_name = features['img_name']
@@ -55,7 +55,7 @@ class Read_Tfrecord(object):
         #print("begin to decode")
         img = tf.image.decode_jpeg(features['img'],channels=3)
         img = tf.reshape(img, shape=[img_height, img_width, 3])
-        gt_labels = tf.cast(features['gt'], tf.int32)
+        gt_labels = tf.cast(features['gt'],tf.int32)
         gt_labels = tf.reshape(gt_labels, [-1])
         return img_name, img, gt_labels
 
@@ -90,9 +90,10 @@ class Read_Tfrecord(object):
                     num_threads=4,
                     capacity=self.sample_num+self.batch_size,
                     shapes=[[cfgs.IMG_SIZE[0],cfgs.IMG_SIZE[1],3],\
-                            [1]],
+                            [cfgs.CLS_NUM]],
                     min_after_dequeue=self.sample_num)
         return img_name_batch, img_batch, gt_label_batch
+        #return img_batch, gt_label_batch
 
 class DecodeTFRecordsFile(object):
     def __init__(self,tfrecords_name,batch_size):
@@ -125,7 +126,7 @@ class DecodeTFRecordsFile(object):
 if __name__ == '__main__':
     img_dict = dict()
     sess = tf.Session()
-    tfrd = Read_Tfrecord('Prison','../../data',1,True)
+    tfrd = Read_Tfrecord('CelebA','../../data',1,True)
     img_name_batch, img_batch, gtboxes_and_label_batch = tfrd.next_batch()
     coord = tf.train.Coordinator()
     threads = tf.train.start_queue_runners(sess=sess, coord=coord)
@@ -134,15 +135,15 @@ if __name__ == '__main__':
             print("idx",i)
             img,gt = sess.run([img_batch,gtboxes_and_label_batch])
             print("img",np.shape(img))
-            print('gt',np.shape(gt),gt[0])
+            print('gt',np.shape(gt),gt)
             #print('name:',name)
             #print('num_obg:',obg)
             print('data',img[0,5,:5,0])
             img_dict['img_data'] = img[0]
-            img_dict['gt'] = gt[0]
-            #label_show(img_dict)
+            img_dict['gt'] = gt
+            label_show(img_dict)
     except tf.errors.OutOfRangeError:
-        print("Over！！！")
+        print("ERRor Over！！！")
     finally:
         coord.request_stop()
     coord.join(threads)

@@ -20,9 +20,9 @@
 #python image_preprocess.py --img-dir /home/lxy/Develop/Center_Loss/git_prj/BaiduImageSpider/img_dw/remote_control --out-file ./output/remote_control.txt  --base-label 3 --cmd-type gen_filepath_1dir
 #python image_preprocess.py --img-dir /home/lxy/Develop/Center_Loss/git_prj/BaiduImageSpider/img_dw/bg_2 --out-file ./output/bg_2.txt  --base-label 0 --cmd-type gen_filepath_1dir
 ### merge
-#python image_preprocess.py  --file-in ./output/hand_fg.txt  --file2-in ./output/hand_bg.txt --out-file ./output/hand.txt --cmd-type merge
-#python image_preprocess.py  --file-in ./output/print_fg.txt  --file2-in ./output/print_bg.txt --out-file ./output/print.txt --cmd-type merge
-#python image_preprocess.py  --file-in ./output/print.txt  --file2-in ./output/hand.txt --out-file ./output/print_hand.txt --cmd-type merge
+python image_preprocess.py  --file-in ./output/train_celeb.csv   --out-file ./output/train.txt --cmd-type gen_trainlabel
+#python image_preprocess.py  --file-in /home/lxy/Downloads/train_celeb.txt  --file2-in /home/lxy/Downloads/identity_CelebA.txt --out-file ./output/train_celeb.txt --cmd-type merge
+#python image_preprocess.py  --file-in ./output/train.txt  --file2-in ./output/list_eval_partition.txt --save-dir ./output --cmd-type split
 #python image_preprocess.py  --file-in ./output/print_hand.txt  --file2-in ./output/mobile_fg.txt --out-file ./output/data.txt --cmd-type merge
 #python image_preprocess.py  --file-in ./output/mobile_bg.txt  --file2-in ./output/mobile_fg.txt --out-file ./output/mobile.txt --cmd-type merge
 #python image_preprocess.py  --file-in ./output/mobile.txt  --file2-in ./output/print_hand.txt --out-file ./output/data2.txt  --base-label 0 --cmd-type merge2change
@@ -35,4 +35,4 @@
 #python image_preprocess.py  --file-in ./output/cellphone.txt  --file2-in ./output/monitor.txt --out-file ./output/phone_monitor.txt --cmd-type merge
 #python image_preprocess.py  --file-in ./output/phone_monitor.txt  --file2-in ./output/remote_control.txt --out-file ./output/phone_moni_rc.txt --cmd-type merge
 #python image_preprocess.py  --file-in ./output/phone_moni_rc.txt  --file2-in ./output/bg_2.txt --out-file ./output/data4.txt --cmd-type merge
-python image_preprocess.py  --file-in ./output/data3.txt  --file2-in ./output/data4.txt --out-file ./output/data3_4.txt --cmd-type merge
+#python image_preprocess.py  --file-in ./output/data3.txt  --file2-in ./output/data4.txt --out-file ./output/data3_4.txt --cmd-type merge

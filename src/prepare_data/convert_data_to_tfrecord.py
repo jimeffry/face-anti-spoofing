@@ -59,7 +59,7 @@ class DataToRecord(object):
             value = [value]
         return tf.train.Feature(float_list=tf.train.FloatList(value=value))
     
-    def write_recore(self,img_dict):
+    def write_record(self,img_dict):
         # maybe do not need encode() in linux
         img_name = img_dict['img_name']
         img_height,img_width = img_dict['img_shape']
@@ -74,7 +74,7 @@ class DataToRecord(object):
             'img_height': self._int64_feature(img_height),
             'img_width': self._int64_feature(img_width),
             'img': self._bytes_feature(img.tostring()),
-            'gt': self._int64_feature(gtbox_label)
+            'gt': self._bytes_feature(gtbox_label)
         })
         example = tf.train.Example(features=feature)
         self.writer.write(example.SerializeToString())
@@ -105,10 +105,10 @@ class Img2TFrecord(object):
         annotation: 1/img_01 1 ...
         '''
         img_dict = dict()
-        annotation = annotation.strip().split()
+        annotation = annotation.strip().split(',')
         self.img_prefix = annotation[0]
         #gt
-        self.label = string.atoi(annotation[1])
+        self.label = [int(tmp) for tmp in annotation[1:]]
         #if int(self.label) != 0:
          #   return None
         #load image
@@ -163,10 +163,10 @@ class Img2TFrecord(object):
             if img_dict is None:
                 #print("the img path is none:",tmp.strip().split()[0])
                 continue
-            self.record_w.write_recore(img_dict)
+            self.record_w.write_record(img_dict)
             #label_show(img_dict,'bgr')
             total_img+=1
-            if random.randint(0, 1) and not cfgs.BIN_DATA:
+            if random.randint(0, 1) and  cfgs.IMGENHANCE:
                 img_dict = self.transform_img()
                 if img_dict is None:
                     #print("the aug img path is none:",tmp.strip().split()[0])
@@ -191,10 +191,10 @@ def label_show(img_dict,mode='rgb'):
     if mode == 'rgb':
         img = img[:,:,::-1]
     img = np.array(img,dtype=np.uint8)
-    gt = float(img_dict['gt'])
+    #gt = float(img_dict['gt'])
     #print("img",img.shape)
     #print("box",gt.shape)
-    score_label = str("{:.2f}".format(gt))
+    score_label = str("{:.2f}".format(0.0))
     cv2.putText(img,score_label,(int(20),int(20)),cv2.FONT_HERSHEY_SIMPLEX,1,(0,255,0))
     cv2.imshow("img",img)
     cv2.waitKey(0)

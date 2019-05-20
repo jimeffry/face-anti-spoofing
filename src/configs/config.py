@@ -15,26 +15,24 @@ cfgs = EasyDict()
 
 
 #------------------------------------------ convert data to tfrecofr config
+cfgs.IMGENHANCE = 0
 cfgs.BIN_DATA = 0 # whether read image data from binary
-cfgs.CLS_NUM = 4 #inlcude background:0, mobile:1  tv:2 remote-control:3
-cfgs.Beard = ['No_Beard','Mustache','Goatee','5_o_Clock_Shadow','Beard']
-cfgs.Hair = ['Other_color','Black','Blond','Brown','Gray']
-cfgs.Head = ['normal','Bangs','Bald']
+cfgs.CLS_NUM = 21 #inlcude background:0, mobile:1  tv:2 remote-control:3
 cfgs.FaceProperty = ['No_Beard','Mustache','Goatee','5_o_Clock_Shadow','Black_Hair','Blond_Hair','Brown_Hair','Gray_Hair','Bangs','Bald', \
         'Male','Wearing_Hat','Wearing_Earrings','Wearing_Necklace','Wearing_Necktie',\
         'Eyeglasses','Young','Smiling','Arched_Eyebrows','Bushy_Eyebrows','Blurry']
 # ---------------------------------------- System_config
-cfgs.NET_NAME = 'lenet5'#'resnet100'  # 'mobilenetv2' 'resnet50' 'lenet5'
+cfgs.NET_NAME = 'mobilenetv2'#'resnet100'  # 'mobilenetv2' 'resnet50' 'lenet5'
 cfgs.SHOW_TRAIN_INFO_INTE = 100
 cfgs.SMRY_ITER = 250
-cfgs.DATASET_NAME = 'FaceAnti' #'Mobile' 'Prison' FaceAnti Fruit
-cfgs.DATASET_LIST = ['Prison', 'WiderFace','Mobile','FaceAnti','Fruit'] 
+cfgs.DATASET_NAME = 'CelebA' #'Mobile' 'Prison' FaceAnti Fruit
+cfgs.DATASET_LIST = ['Prison', 'WiderFace','Mobile','FaceAnti','CelebA'] 
 cfgs.DATA_NAME = ['normal','fake','monitor','telecontroller'] 
 
 # ------------------------------------------ Train config
 cfgs.RD_MULT = 0
 cfgs.MODEL_PREFIX = 'mobilenetv2-1_0'
-cfgs.IMG_SIZE = [224,224]
+cfgs.IMG_SIZE = [112,112]
 cfgs.BN_USE = True 
 cfgs.WEIGHT_DECAY = 1e-5
 cfgs.MOMENTUM = 0.9
@@ -44,8 +42,8 @@ cfgs.DECAY_STEP = [15000,25000,35000,50000]
 cfgs.PIXEL_MEAN = [127.5,127.5,127.5] #[123.68, 116.779, 103.939]  # R, G, B. In tf, channel is RGB. In openCV, channel is BGR
 cfgs.PIXEL_NORM = 128.0
 cfgs.IMG_LIMITATE = 0
-cfgs.IMG_SHORT_SIDE_LEN = 224
-cfgs.IMG_MAX_LENGTH = 224
+cfgs.IMG_SHORT_SIDE_LEN = 112
+cfgs.IMG_MAX_LENGTH = 112
 # -------------------------------------------- test model
 cfgs.ShowImg = 0
 cfgs.mx_version = 1

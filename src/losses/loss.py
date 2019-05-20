@@ -11,6 +11,10 @@
 ####################################################
 import numpy as np 
 import tensorflow as tf 
+import sys 
+import os 
+sys.path.append(os.path.join(os.path.dirname(__file__),"../configs"))
+from config import cfgs
 
 
 def entropy_loss(logits,labels,class_num,lr_mult=1):
@@ -82,15 +86,53 @@ def cal_accuracy(cls_prob,label):
     accuracy_op = tf.reduce_mean(tf.cast(tf.equal(label_int,pred),tf.float32))
     return accuracy_op,label_int,pred,cls_prob
 
+def calc_focal_loss(cls_outputs, cls_targets, alpha=0.25, gamma=2.0):
+    """
+    Args:
+        cls_outputs: [batch_size, num_classes]
+        cls_targets: [batch_size, num_classes]
+    Returns:
+        cls_loss:[1]
+
+    Compute focal loss:
+        FL = -(1 - pt)^gamma * log(pt), where pt = p if y == 1 else 1 - p
+        cf. https://arxiv.org/pdf/1708.02002.pdf
+    """
+    cls_targets = tf.cast(tf.reshape(cls_targets, [-1,cfgs.CLS_NUM]),tf.int32)
+    positive_mask = tf.equal(cls_targets, 1)
+    pos = tf.where(positive_mask, 1.0 - cls_outputs, tf.zeros_like(cls_outputs))
+    neg = tf.where(positive_mask, tf.zeros_like(cls_outputs), cls_outputs)
+    pos_loss = - alpha * tf.pow(pos, gamma) * tf.log(tf.clip_by_value(cls_outputs, 1e-15, 1.0))
+    neg_loss = - (1 - alpha) * tf.pow(neg, gamma) * tf.log(tf.clip_by_value(1.0 - cls_outputs, 1e-15, 1.0))
+    loss = tf.reduce_sum(pos_loss + neg_loss, axis=0)
+    total_loss = tf.reduce_sum(pos_loss+neg_loss)
+    return total_loss,loss
+
+def calc_acc(cls_outputs,cls_targets):
+    """
+    Args:
+        cls_outputs: [batch_size, num_classes]
+        cls_targets: [batch_size, num_classes]
+    Returns:
+        acc: number(0-100)
+    """
+    pred_mask = tf.greater(cls_outputs,0.5)
+    pred_label = tf.where(pred_mask,tf.ones_like(cls_targets),tf.zeros_like(cls_targets))
+    pred_label = tf.cast(pred_label,tf.int32)
+    cls_targets = tf.cast(cls_targets,tf.int32)
+    acc = tf.reduce_mean(tf.cast(tf.equal(pred_label,cls_targets),tf.float32),axis=0)
+    return acc,cls_targets,pred_label
+
 if __name__ == '__main__':
     pred = tf.constant([[0.2,0.3],[0.8,0.4],[0.1,0.9]],dtype=tf.float32)
-    label = np.array([0,1,1])
+    label = tf.constant([[0,1],[1,0],[0,1]],dtype=tf.int32)
     print(pred.shape,label.shape)
     sess = tf.Session()
     #err = focal_loss(pred,label,2)
-    err = entropy_loss(pred,label,2)
+    #err = entropy_loss(pred,label,2)
+    err = calc_focal_loss(pred,label)
     er_o = sess.run(err)
-    print('out',er_o[0])
-    ac = cal_accuracy(err[1],label)
+    print('out',er_o)
+    ac = calc_acc(pred,label)
     acc = sess.run(ac)
-    print('acc',acc[0])
+    print('acc',acc)

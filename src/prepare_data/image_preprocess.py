@@ -9,6 +9,7 @@ import numpy as np
 import sys 
 import os 
 import csv
+import tqdm
 import argparse
 sys.path.append(os.path.join(os.path.dirname(__file__), '../configs'))
 from config import cfgs
@@ -233,49 +234,13 @@ def generate_train_label(file_in,fileout):
     cnt_dict = dict()
     cnt_err=0
     for f_item in reader:
+        cnt_err+=1
+        if cnt_err< 999:
+            continue
         #print(f_item.keys())
         tmp_label = []
         img_name = f_item['filename']
         tmp_label.append(img_name)
-        '''
-        #beard
-        label_beard = '4'
-        for tmp_key in beard_keys:
-            if int(f_item[tmp_key])==1:
-                label_beard = str(beard_keys.index(tmp_key))
-                cur_cnt = cnt_dict.setdefault(tmp_key,0)
-                cnt_dict[tmp_key] = cur_cnt+1
-                break
-        if label_beard == '4':
-            cur_cnt = cnt_dict.setdefault('has_beard',0)
-            cnt_dict['has_beard'] = cur_cnt+1
-        tmp_label.append(label_beard)
-        #hair
-        label_hair = '0'
-        for tmp_key in hair_keys:
-            if int(f_item[tmp_key])==1:
-                label_hair = str(hair_keys.index(tmp_key)+1)
-                cur_cnt = cnt_dict.setdefault(tmp_key,0)
-                cnt_dict[tmp_key] = cur_cnt+1
-                break
-        if label_hair=='0':
-            #cnt_dict['other_hair']+=1
-            cur_cnt = cnt_dict.setdefault('other_hair',0)
-            cnt_dict['other_hair'] = cur_cnt+1
-        tmp_label.append(label_hair)
-        #head
-        label_head = '0'
-        for tmp_key in head_keys:
-            if int(f_item[tmp_key])==1:
-                label_head = str(head_keys.index(tmp_key)+1)
-                cur_cnt = cnt_dict.setdefault(tmp_key,0)
-                cnt_dict[tmp_key] = cur_cnt+1
-                break
-        if label_head == '0':
-            cur_cnt = cnt_dict.setdefault('normal_head',0)
-            cnt_dict['normal_head'] = cur_cnt+1
-        tmp_label.append(label_head)
-        '''
         #other property
         for tmp_key in label_keys:
             if int(f_item[tmp_key])==1:
@@ -287,15 +252,41 @@ def generate_train_label(file_in,fileout):
                 cur_cnt = cnt_dict.setdefault(tmp_key+'_n',0)
                 cnt_dict[tmp_key+'_n'] = cur_cnt +1
         #if int(f_item['Arched_Eyebrows'])==1 and int(f_item['Bushy_Eyebrows'])==1:
-         #   cnt_err+=1
         tmp_label = ','.join(tmp_label)
         f_out.write("{}\n".format(tmp_label))
         #print(f_item['filename'])
     f_in.close()
     f_out.close()  
     #print(cnt_err)
-    for key in cnt_dict.keys():
+    for key in np.sort(cnt_dict.keys()):
         record.write(key+' :'+str(cnt_dict[key])+'\n')
+
+def split_train_test(file_1,file_2,out_dir):
+    '''
+    file_1: all imgs and label
+    file_2: all imgs and train val test fg
+    out_dir: train.txt and test.txt save dir
+    ''' 
+    f1_r = open(file_1,'r')
+    f2_r = open(file_2,'r')
+    train_w = open(out_dir+'/celeba_train.txt','w')
+    test_w = open(out_dir+'/celeba_test.txt','w')
+    f1_ctx = f1_r.readlines()
+    f2_ctx = f2_r.readlines()
+    cnt_test = 0
+    for i in tqdm.tqdm(range(len(f1_ctx))):
+        tmp2 = f2_ctx[i].strip().split()
+        tmp1 = f1_ctx[i].strip()
+        if int(tmp2[-1])==2:
+            test_w.write("{}\n".format(tmp1))
+            cnt_test+=1
+        else:
+            train_w.write("{}\n".format(tmp1))
+    f1_r.close()
+    f2_r.close()
+    train_w.close()
+    test_w.close()
+    print("test",cnt_test)
 
 if __name__ == "__main__":
     args = parms()
@@ -317,3 +308,5 @@ if __name__ == "__main__":
         merge2change(txt_file,file2_in,out_file,label)
     elif cmd_type == 'gen_trainlabel':
         generate_train_label(txt_file,out_file)
+    elif cmd_type == 'split':
+        split_train_test(txt_file,file2_in,save_dir)

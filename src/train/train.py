@@ -32,7 +32,7 @@ from convert_data_to_tfrecord import label_show
 sys.path.append(os.path.join(os.path.dirname(__file__),'../utils'))
 from get_property import load_property
 sys.path.append(os.path.join(os.path.dirname(__file__),'../losses'))
-from loss import focal_loss,cal_accuracy,entropy_loss
+from loss import calc_acc,calc_focal_loss
 
 def parms():
     parser = argparse.ArgumentParser(description='Face-anti training')
@@ -79,7 +79,7 @@ def train(args):
     batch_size = args.batch_size
     save_weight_period = args.save_weight_period
     data_record_dir = args.data_record_dir
-    property_file = os.path.join(data_record_dir,cfgs.DATASET_NAME,'property.txt')
+    property_file = os.path.join(data_record_dir,cfgs.DATASET_NAME,'property_train.txt')
     Property = load_property(property_file)
     train_img_nums = Property['img_nums']
     class_nums = Property['cls_num']
@@ -88,7 +88,7 @@ def train(args):
         if cfgs.RD_MULT:
             img_batch,label_batch = read_multi_rd(data_record_dir,'fg','bg',batch_size,train_img_nums,1.0/class_nums)
         else:
-            tfrd = Read_Tfrecord(cfgs.DATASET_NAME,data_record_dir,batch_size,train_img_nums)
+            tfrd = Read_Tfrecord(cfgs.DATASET_NAME,data_record_dir,batch_size,2000)
             _, img_batch, label_batch = tfrd.next_batch()
             #tfrecords_name = 'fruits_train.tfrecords'
             #Tfd = DecodeTFRecordsFile(tfrecords_name,batch_size)
@@ -101,11 +101,15 @@ def train(args):
     with tf.variable_scope('build_loss'):
         weight_decay_loss = tf.add_n(tf.losses.get_regularization_losses())
         #cls_loss,soft_logits = focal_loss(logits,label_batch,class_nums)
-        cls_loss,soft_logits = entropy_loss(logits,label_batch,class_nums)
-        total_loss = cls_loss + weight_decay_loss
-        acc_op,label_out,pred,feature = cal_accuracy(soft_logits,label_batch)
+        #cls_loss,soft_logits = entropy_loss(logits,label_batch,class_nums)
+        cls_all_loss,cls_every_loss = calc_focal_loss(logits,label_batch)
+        total_loss = cls_all_loss + weight_decay_loss
+        #acc_op,label_out,pred,feature = cal_accuracy(soft_logits,label_batch)
+        acc_op,label_out,pred = calc_acc(logits,label_batch)
     # ---------------------------------------------------------------------------------------------------add summary
-    tf.summary.scalar('LOSS/cls_loss', cls_loss)
+    tf.summary.scalar('LOSS/cls_all_loss', cls_all_loss)
+    #tf.summary.scalar('LOSS/cls_every_loss',cls_every_loss)
+    tf.summary.histogram('LOSS/cls_every_loss',cls_every_loss)
     tf.summary.scalar('LOSS/total_loss', total_loss)
     tf.summary.scalar('LOSS/regular_weights', weight_decay_loss)
     # ---------------------------------------------------------------------------------------------------learning rate
@@ -164,13 +168,16 @@ def train(args):
                         else:
                             if step % cfgs.SHOW_TRAIN_INFO_INTE == 0 and step % cfgs.SMRY_ITER != 0:
                                 start = time.time()
-                                label_o,pred_out,feat,global_stepnp, totalLoss,cls_l,acc,cur_lr = sess.run([label_out,pred,feature,global_step, total_loss,cls_loss,acc_op,lr])
+                                label_o,pred_out,global_stepnp, totalLoss,cls_l,acc,cur_lr = sess.run([label_out,pred,global_step, total_loss,cls_all_loss,acc_op,lr])
                                 end = time.time()
-                                print('label',label_o)
-                                print('pred',pred_out)
+                                print('label',label_o[0,:10])
+                                print('pred',pred_out[0,:10])
                                 #print('feature',feat[0])
-                                print(""" %s epoch:%d step:%d | per_cost_time:%.3f s | total_loss:%.3f | cls_loss:%.5f | acc:%.4f | lr:%.6f""" \
-                                    % (str(training_time), epoch_tmp,global_stepnp, (end - start),totalLoss,cls_l,acc,cur_lr))
+                                #print(""" %s epoch:%d step:%d | per_cost_time:%.3f s | total_loss:%.3f | cls_loss:%.5f | acc:%.4f | lr:%.6f""" \
+                                #    % (str(training_time), epoch_tmp,global_stepnp, (end - start),totalLoss,cls_l,acc,cur_lr))
+                                print(""" %s epoch:%d step:%d | per_cost_time:%.3f s | total_loss:%.3f | cls_loss:%.5f |  lr:%.6f""" \
+                                    % (str(training_time), epoch_tmp,global_stepnp, (end - start),totalLoss,cls_l,cur_lr))
+                                print("properties acc: ".format(acc))
                             else:
                                 if step % cfgs.SMRY_ITER == 0:
                                     global_stepnp, summary_str = sess.run([global_step, summary_op])
@@ -179,7 +186,7 @@ def train(args):
                     if (epoch_tmp > 0 and epoch_tmp % save_weight_period == 0) or (epoch_tmp == epochs - 1):
                         save_dir = model_path
                         saver.save(sess, save_dir,epoch_tmp)
-                        print(' weights had been saved')
+                        print('*********************** weights had been saved************')
         except tf.errors.OutOfRangeError:
             print("Trianing is over")
         finally:
