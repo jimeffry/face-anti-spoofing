@@ -21,7 +21,6 @@
 ## Training Data
 * The training datas are downloaded from internet,using the tool [BaiduDownload](https://github.com/kong36088/BaiduImageSpider)
 * We have created the dataset including 4 classes (Mobilephone:1 TV:2 telectroller:3 background:0).
-* The dataset lies on 192.168.0.9: /data/lxy_home/data/face_anti_data/
 ## Run Train and Test demo
 Configuration parameters lies in Root/src/configs/config.py
 1. directory
