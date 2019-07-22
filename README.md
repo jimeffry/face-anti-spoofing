@@ -1,5 +1,5 @@
 # Reproduction of MobileNetV2 using MXNet for Face Anti Spoofing
-
+* I recommend mxnet version for classification, which has pretrained models on ImageNet.[here a link](https://github.com/jimeffry/face-attributes-mxnet)
 ***
 ## Project Descriptions
 + **created by :** lxy and shj
